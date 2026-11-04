@@ -8,24 +8,31 @@ import assert from 'node:assert/strict';
 export async function check({page,result,shot,file}) {
   const plan=JSON.parse(await readFile(process.env.ALEMBIC_DEMO_PLAN,'utf8'));
   const out=process.env.ALEMBIC_OUT, frames=resolve(out,'frames');
-  await page.setViewportSize({width:1600,height:900});
-  const cdp=await page.context().newCDPSession(page), entries=[], writes=[],milestones=[];let index=0,last=0,speed=1;
+  await page.setViewportSize({width:plan.width||1920,height:plan.height||1080});
+  const cdp=await page.context().newCDPSession(page), entries=[], writes=[],milestones=[],receiving=new Set();
+  let index=0,last=0,speed=1;
   if(plan.capture){
     await mkdir(frames,{recursive:true});
-    cdp.on('Page.screencastFrame',async event=>{
+    const receive=async event=>{
       await cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId});
       const now=event.metadata.timestamp;
       if(now-last<(speed/(plan.fps||30)))return;
       last=now;const name=String(index++).padStart(6,'0')+'.jpg';
       const entry={name,time:now,speed};entries.push(entry);
+      entry.terminal=await page.locator('.native-agent-terminal').isVisible()?
+        await page.locator('.xterm-rows').innerText().catch(()=> ''):'';
       writes.push(writeFile(resolve(frames,name),Buffer.from(event.data,'base64')));
-    });
-    await cdp.send('Page.startScreencast',{format:'jpeg',quality:85,maxWidth:1600,maxHeight:900,everyNthFrame:1});
+    };
+    cdp.on('Page.screencastFrame',event=>{const task=receive(event);receiving.add(task);
+      task.finally(()=>receiving.delete(task));});
+    await cdp.send('Page.startScreencast',{format:'jpeg',quality:plan.quality||97,maxWidth:plan.width||1920,
+      maxHeight:plan.height||1080,everyNthFrame:1});
   }
   const sensitive=[];
   const privacy=setInterval(async()=>{
-    const text=await page.locator('.xterm-rows').innerText().catch(()=> '');
-    if(/(?:[?&#]token=|#node=|\bsk-[A-Za-z0-9_-]{20,}|(?:API_KEY|FAL_KEY|ACCESS_TOKEN)=\S+)/i.test(text))
+    const text=await page.locator('.native-agent-terminal').isVisible()?
+      await page.locator('.xterm-rows').innerText().catch(()=> ''):'';
+    if(/(?:\/home\/|[?&#]token=|#node=|\bsk-[A-Za-z0-9_-]{20,}|(?:API_KEY|FAL_KEY|ACCESS_TOKEN)=\S+)/i.test(text))
       sensitive.push(Date.now()/1000);
   },300);
   try {
@@ -34,6 +41,9 @@ export async function check({page,result,shot,file}) {
       const target=action.selector?page.locator(action.selector):null;
       if(action.op==='click')await target.click({button:action.button||'left',timeout:action.timeout||15000});
       else if(action.op==='type')await page.keyboard.type(action.text,{delay:action.delay??35});
+      else if(action.op==='move'){const b=await page.locator(action.selector||'.viewport').boundingBox();
+        await page.mouse.move(b.x+b.width*action.at[0],b.y+b.height*action.at[1],{steps:action.steps||30});}
+      else if(action.op==='wheel')await page.mouse.wheel(action.dx||0,action.dy||0);
       else if(action.op==='press')await page.keyboard.press(action.key);
       else if(action.op==='wait')await page.waitForTimeout(action.ms);
       else if(action.op==='visible')await target.waitFor({state:action.state||'visible',timeout:action.timeout||30000});
@@ -78,7 +88,7 @@ export async function check({page,result,shot,file}) {
   } finally {
     clearInterval(privacy);
     if(plan.capture)await cdp.send('Page.stopScreencast');
-    await Promise.all(writes);
+    await Promise.all([...receiving]);await Promise.all(writes);entries.sort((a,b)=>a.time-b.time);
     await writeFile(resolve(out,'capture.json'),JSON.stringify({name:plan.name,ended:Date.now()/1000,frames:entries,
       sensitive,milestones},null,2));
     result.demo={name:plan.name,frames:entries.length,sensitive:sensitive.length};
@@ -109,7 +119,9 @@ if(process.argv[2]==='--encode'){
   const list=resolve(process.env.TMPDIR,'demo.ffconcat');await writeFile(list,lines.join('\n')+'\n');
   const ffmpeg=process.env.FFMPEG||tool('ffmpeg-nvenc/bin/ffmpeg','ffmpeg');
   const run=spawnSync(ffmpeg,['-y','-hide_banner','-loglevel','error','-f','concat','-safe','0','-i',list,
-    '-vf','fps=30,format=yuv420p','-c:v','libx264','-preset','fast','-crf','23','-movflags','+faststart',edit.output],
+    '-vf','scale=in_range=full:out_range=tv:out_color_matrix=bt709,fps=30,format=yuv420p',
+    '-c:v','libx264','-preset','fast','-crf',String(edit.crf||18),'-profile:v','high','-color_range','tv',
+    '-r','30','-fps_mode','cfr','-video_track_timescale','30000','-movflags','+faststart',edit.output],
       {stdio:'inherit'});
   assert.equal(run.status,0,'H.264 encoding failed');console.log(JSON.stringify({seconds,output:edit.output}));
 }
