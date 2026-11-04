@@ -1,0 +1,2 @@
+exports-index	1
+render	app	app	http://localhost:5173

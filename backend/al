@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""backend/al embed PATH|HTTP-URL [--mock]; backend/al attach [SESSION] [-- COMMAND...]."""
+import argparse, base64, fcntl, json, os, select, socket, subprocess, sys, termios, time, tty
+from pathlib import Path
+sys.dont_write_bytecode = True
+from common import HOME, REPO, identity, location, private, rpc, stop, connection, launch_url, start, project_dir
+from sessions import ensure
+from completion import RULE, done
+
+def frontend():
+    if os.environ.get('AL_ASSETS'):
+        return
+    with (Path(os.environ['TMPDIR']) / 'build.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        ui = REPO / 'frontend'
+        index = ui / 'dist/index.html'
+        sources = [p for base in (ui / 'src', ui / 'public', REPO / 'render') for p in base.rglob('*') if p.is_file()]
+        sources += [p for p in ui.iterdir() if p.is_file()]
+        if not index.exists() or any((p.stat().st_mtime_ns > index.stat().st_mtime_ns for p in sources)):
+            subprocess.run(['npm', '--prefix', str(ui), 'run', 'build'], check=True)
+
+def current(args):
+    if args.project:
+        return Path(args.project).resolve()
+    try:
+        return Path((HOME / 'relay/current').read_text())
+    except FileNotFoundError:
+        return Path.cwd()
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--project', type=Path)
+    sub = parser.add_subparsers(dest='command', required=True)
+    embed = sub.add_parser('embed')
+    embed.add_argument('target')
+    embed.add_argument('--mock', action='store_true')
+    embed.add_argument('--port', type=int, default=0)
+    embed.add_argument('--open', action='store_true')
+    attach = sub.add_parser('attach')
+    attach.add_argument('session', nargs='?')
+    attach.add_argument('--new', action='store_true')
+    attach.add_argument('--suppress', action='store_true')
+    attach.add_argument('argv', nargs=argparse.REMAINDER)
+    wait = sub.add_parser('wait')
+    wait.add_argument('--name', required=True)
+    wait.add_argument('--once', action='store_true')
+    sub.add_parser('done').add_argument('details')
+    for name in ('sessions', 'stop', 'url'):
+        sub.add_parser(name)
+    state = sub.add_parser('state')
+    state.add_argument('action', choices=['save', 'report'])
+    state.add_argument('name')
+    for name in ('freeze', 'unfreeze'):
+        sub.add_parser(name).add_argument('name')
+    fuzz = sub.add_parser('fuzz')
+    fuzz.add_argument('--seed', type=int, required=True)
+    fuzz.add_argument('--runs', type=int, default=10)
+    for name in ('log', 'diff', 'restore', 'graph'):
+        sub.add_parser(name).add_argument('args', nargs='*')
+    args = parser.parse_args()
+    if args.command == 'done': return done(args.details)
+    root = current(args)
+    if args.command == 'embed':
+        os.environ.setdefault('TMPDIR', str(REPO / '.tmp/embed'))
+        private(Path(os.environ['TMPDIR']))
+        frontend()
+        upstream = args.target if args.target.startswith(('http://', 'https://')) else ''
+        target = Path(args.target).resolve()
+        if upstream and (not upstream.startswith('http://')):
+            raise ValueError('HTTPS proxy is unavailable; use an HTTP development endpoint')
+        root = root if args.project else private(Path(os.environ['TMPDIR']) / ('embed-' + identity(
+            upstream))) if upstream else target if target.is_dir() else private(
+                Path(os.environ['TMPDIR']) / ('embed-' + identity(target)))
+        entry = target.name if not upstream and target.is_file() else 'index.html'
+        node = root.name.removesuffix('.iframe') + '.iframe' if upstream or target.is_file() or (target / 'index.html').is_file() else ''
+        state = str(REPO / 'tests/states/iframe-success.json') if args.mock else ''
+        self_app = args.mock and target == REPO / 'frontend'
+        if self_app:state=''
+        command = ['--source', str(target.parent) if not upstream and target.is_file() else '',
+            '--node', node, '--port', str(
+            args.port), '--upstream', upstream, '--state', state]
+        if self_app:
+            command += ['--self-app']
+        command += ['--entry', entry]
+        project_dir(root)
+        private(HOME / 'relay')
+        (HOME / 'relay/current').write_text(str(root))
+        try:
+            connection(root)
+        except OSError:
+            pass
+        else:
+            raise RuntimeError('Relay already running; use backend/al url or backend/al stop')
+        _, info = start(root, *command)
+        if args.open:
+            url = launch_url(info)
+            subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', "Start-Process '" +
+                url.replace("'", "''") + "'"], check=True, timeout=15)
+        print('Ready. Run backend/al url to obtain the private launch URL; backend/al attach to join its session.')
+        return
+    folder = location(root)
+    if args.command == 'wait':
+        print(RULE, flush=True)
+        ensure(root)
+        with socket.socket(socket.AF_UNIX) as sock:
+            fd = os.open(folder, os.O_RDONLY | os.O_DIRECTORY)
+            try: sock.connect(f'/proc/self/fd/{fd}/pty.sock')
+            finally: os.close(fd)
+            sock.sendall((json.dumps(dict(op='wait', name=args.name, once=args.once))+'\n').encode())
+            stream = sock.makefile('r')
+            reply = json.loads(stream.readline())
+            if 'error' in reply: raise ValueError(reply['error'])
+            for line in stream:
+                print(line, end='', flush=True)
+                if args.once: break
+        return
+    if args.command == 'url':
+        print(launch_url(connection(root)))
+        return
+    if args.command == 'stop':
+        stop(connection(root)['pid'], str(REPO / 'backend/server.py'))
+        (folder / 'server.json').unlink()
+        return
+    if args.command == 'sessions':
+        print(json.dumps(rpc(root, 'list'), indent=2))
+        return
+    if args.command == 'attach':
+        if not sys.stdin.isatty():
+            raise ValueError('backend/al attach requires a normal terminal')
+        ensure(root)
+        argv = args.argv[1:] if args.argv[:1] == ['--'] else args.argv
+        if args.new and args.session:
+            argv = [args.session, *argv]
+        id = rpc(root, 'create', suppress=args.suppress, argv=argv or None, external=True) if args.new or argv else rpc(root, 'focus',
+            id=args.session) if args.session else rpc(root, 'default', suppress=False)
+        before = termios.tcgetattr(0)
+        cursor = 0
+        tty.setraw(0)
+        try:
+            while True:
+                size = os.get_terminal_size()
+                rpc(root, 'resize', id=id, cols=size.columns, rows=size.lines)
+                data = rpc(root, 'read', id=id, cursor=cursor)
+                cursor = data['cursor']
+                os.write(1, base64.b64decode(data['data']))
+                if data['exited']:
+                    break
+                if select.select([0], [], [], 0.03)[0]:
+                    value = os.read(0, 65536)
+                    if b'\x1d' in value:
+                        break
+                    rpc(root, 'input', id=id, data=base64.b64encode(value).decode())
+        finally:
+            termios.tcsetattr(0, termios.TCSADRAIN, before)
+        return
+    if args.command in ('state', 'freeze', 'unfreeze', 'fuzz'):
+        from state_cli import run
+        return run(args, root)
+    from server import git
+    if args.command == 'log':
+        print(git(root, 'log', '--oneline', *args.args), end='')
+    elif args.command == 'diff':
+        print(git(root, 'diff', *args.args), end='')
+    elif args.command == 'graph':
+        print(git(root, 'log', '--graph', '--oneline', *args.args), end='')
+    elif args.command == 'restore':
+        if len(args.args) != 1:
+            raise ValueError('backend/al restore <git revision>')
+        print(git(root, 'restore', '--source=' + args.args[0], '--worktree', '--', '.'))
+if __name__ == '__main__':
+    try:
+        main()
+    except (ValueError, RuntimeError, OSError, subprocess.SubprocessError) as error:
+        sys.exit(str(error))

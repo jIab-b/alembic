@@ -1,0 +1,3 @@
+playbacks-index	2
+scenario	listen	Listen	main	2	none	"media.loop=true; await media.play(); return () => media.pause();"
+scenario	unknown	Unknown	main	unknown	none	"media.loop=true; await media.play(); return () => media.pause();"

@@ -1,0 +1,4 @@
+exports-index	1
+render	main	babylon	index.html
+render	portable	glb	source/teleporter.glb
+interaction	main	io_lock	true

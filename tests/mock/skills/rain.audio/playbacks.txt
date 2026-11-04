@@ -1,0 +1,2 @@
+playbacks-index	2
+scenario	rain	Rain loop · 10 seconds	main	10	none	"await media.play(); return () => media.pause();"

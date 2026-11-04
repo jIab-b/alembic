@@ -1,0 +1,163 @@
+{
+  "sceneSHA256": "17305b2288570236e0ab42284d94237fc277d4c0cbad66a328d7699f8be2bd80",
+  "validation": {
+    "hardwareWebGPUBase": {
+      "checks": {
+        "archer.i3d": {
+          "type": "i3d",
+          "tools": [
+            "area",
+            "sphere",
+            "box",
+            "pick"
+          ],
+          "contexts": [
+            "webgpu"
+          ],
+          "gpu": {
+            "description": "nvidia",
+            "fallback": false
+          },
+          "colors": 829,
+          "scenarios": [
+            {
+              "id": "idle",
+              "seconds": 6,
+              "changed": true,
+              "completed": true,
+              "replayed": true,
+              "reset": true,
+              "resetDrift": 0
+            },
+            {
+              "id": "walk",
+              "seconds": 6.3,
+              "changed": true,
+              "completed": true,
+              "replayed": true,
+              "reset": true,
+              "resetDrift": 0
+            },
+            {
+              "id": "shoot",
+              "seconds": 7,
+              "changed": true,
+              "completed": true,
+              "replayed": true,
+              "reset": true,
+              "resetDrift": 0
+            }
+          ]
+        }
+      },
+      "errors": []
+    },
+    "hardwareWebGL2Base": {
+      "checks": {
+        "archer.i3d": {
+          "type": "i3d",
+          "tools": [
+            "area",
+            "sphere",
+            "box",
+            "pick"
+          ],
+          "contexts": [
+            "webgl2"
+          ],
+          "gpu": {
+            "description": "ANGLE (Microsoft Corporation, D3D12 (NVIDIA GeForce RTX 5060 Ti), OpenGL ES 3.1)",
+            "fallback": false
+          },
+          "colors": 859,
+          "scenarios": [
+            {
+              "id": "idle",
+              "seconds": 6,
+              "changed": true,
+              "completed": true,
+              "replayed": true,
+              "reset": true,
+              "resetDrift": 0
+            },
+            {
+              "id": "walk",
+              "seconds": 6.3,
+              "changed": true,
+              "completed": true,
+              "replayed": true,
+              "reset": true,
+              "resetDrift": 0
+            },
+            {
+              "id": "shoot",
+              "seconds": 7,
+              "changed": true,
+              "completed": true,
+              "replayed": true,
+              "reset": true,
+              "resetDrift": 0
+            }
+          ]
+        }
+      },
+      "errors": []
+    },
+    "updatedDrawSequenceWebGPU": {
+      "checks": {
+        "inspection": {
+          "backend": "WebGPU",
+          "meshes": 96,
+          "text": ""
+        },
+        "walk": {
+          "opposingLegs": true,
+          "alternatingSteps": true
+        },
+        "arrow": {
+          "holdStart": 2.6067000000476837,
+          "lean": {
+            "angle": 0.20500000000000002,
+            "feet": [
+              0,
+              0
+            ],
+            "time": 4.863
+          },
+          "drawn": {
+            "arrow": [
+              -2.401974079012871,
+              2.2438535816967486,
+              -0.1572810649871826
+            ],
+            "hand": [
+              -2.4019742012023926,
+              2.2438535690307617,
+              -0.1572810560464859
+            ]
+          },
+          "flight": [
+            -0.47102301916494693,
+            2.5120318449002887,
+            -0.08101184628691044
+          ],
+          "hit": {
+            "arrow": [
+              1.58,
+              2.22,
+              0
+            ],
+            "target": [
+              3.3,
+              2.22,
+              0
+            ]
+          },
+          "completionReset": true
+        }
+      },
+      "errors": []
+    }
+  },
+  "note": "Both GPU paths passed complete playback/replay/reset checks. The subsequent 9-second hold-and-lean refinement passed the WebGPU sequence check and deterministic motion checks."
+}

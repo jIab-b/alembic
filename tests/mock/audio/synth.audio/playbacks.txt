@@ -1,0 +1,4 @@
+playbacks-index	2
+scenario	play	Synth	main	0.6	none	"await media.play();"
+scenario	html	HTML	html	0.6	none	"await media.play();"
+scenario	unknown	Unknown	main	unknown	none	"await media.play();"

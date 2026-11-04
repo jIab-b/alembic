@@ -1,0 +1,32 @@
+{
+  "duration": 10.0,
+  "sampleRate": 48000,
+  "channels": 2,
+  "samplePeak": 0.2542724609375,
+  "seamStep": [
+    -0.049560546875,
+    -0.05609130859375
+  ],
+  "ordinaryStep99Percentile": [
+    0.143890380859375,
+    0.143585205078125
+  ],
+  "startRMS": 0.07113297867159289,
+  "endRMS": 0.07145454288982181,
+  "totalBytes": 1927969,
+  "integratedLUFS": -18.0,
+  "truePeakDBTP": -11.26,
+  "offlineAudition": {
+    "duration": 10,
+    "peak": 0.2542780935764313,
+    "wavMaxDifference": 2.168118953704834e-05
+  },
+  "browserChecks": {
+    "node": true,
+    "armed": true,
+    "offlineAudition": true,
+    "playAndFinish": true,
+    "replayAndReset": true
+  },
+  "humanListening": false
+}

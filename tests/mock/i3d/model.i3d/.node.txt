@@ -1,0 +1,1 @@
+{"format":"alembic.node","version":1,"entry":"model.glb","dependencies":{}}

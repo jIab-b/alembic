@@ -1,0 +1,9 @@
+playbacks-index	2
+scenario	wav	wav	wav	2	none	"media.loop=true; await media.play();"
+scenario	mp3	mp3	mp3	2	none	"media.loop=true; await media.play();"
+scenario	ogg	ogg	ogg	2	none	"media.loop=true; await media.play();"
+scenario	flac	flac	flac	2	none	"media.loop=true; await media.play();"
+scenario	m4a	m4a	m4a	2	none	"media.loop=true; await media.play();"
+scenario	aac	aac	aac	2	none	"media.loop=true; await media.play();"
+scenario	opus	opus	opus	2	none	"media.loop=true; await media.play();"
+scenario	unknown	Unknown	wav	unknown	none	"media.loop=true; await media.play();"

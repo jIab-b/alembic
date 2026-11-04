@@ -1,0 +1,3 @@
+exports-index	1
+render	main	wav	tone.wav
+interaction	main	io_lock	true

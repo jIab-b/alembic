@@ -1,0 +1,2 @@
+exports-index	1
+render	main	glb	scene.glb

@@ -1,0 +1,4 @@
+playbacks-index	2
+scenario	play	Translate	main	0.6	none	"{\"clip\": \"Translate\"}"
+scenario	binary	Binary	binary	0.6	none	"{\"clip\": \"Translate\"}"
+scenario	unknown	Unknown	main	unknown	none	"{\"clip\": \"Translate\"}"

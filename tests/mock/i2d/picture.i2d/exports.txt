@@ -1,0 +1,4 @@
+exports-index	1
+render	main	svg	picture.svg
+interaction	main	io_lock	true
+render	alternate	html2d	other.html

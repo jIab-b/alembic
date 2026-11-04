@@ -1,0 +1,4 @@
+<!doctype html><html><head><title>Embedded fixture</title></head><body>
+<button id="click">Click app</button><input id="keys" aria-label="App input"><canvas width="400" height="220"></canvas>
+<script>window.effects={clicks:0,keys:0};document.querySelector('button').onclick=()=>{effects.clicks++;document.querySelector('button').textContent='Clicked '+effects.clicks};addEventListener('keydown',()=>effects.keys++);const c=document.querySelector('canvas').getContext('2d');c.fillStyle='#2475b0';c.fillRect(0,0,400,220);</script>
+</body></html>

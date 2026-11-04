@@ -1,0 +1,27 @@
+node_modules/
+out/
+dist/
+__pycache__/
+/work/
+erl_crash.dump
+frontend/public/assets/runtimes/
+tests/agent-ui-report.md
+
+# Local Vault state, test runs and disposable project fixtures.
+/.alembic/
+/projects/test/
+
+.tmp/
+tests/mock/.alembic/
+
+tests/skills-evidence/demos/*.mp4
+tests/mock/demos/.alembic/
+
+# Local video captures, kept out of the repo.
+demos/vids/
+# Not part of the public repo.
+tests/skills-evidence/
+tests/mock/test_scene/
+frontend/public/examples/
+*.blend
+*.blend1

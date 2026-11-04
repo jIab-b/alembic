@@ -1,0 +1,15 @@
+exports-index	1
+render	wav	wav	tone.wav
+interaction	wav	io_lock	true
+render	mp3	mp3	tone.mp3
+interaction	mp3	io_lock	true
+render	ogg	ogg	tone.ogg
+interaction	ogg	io_lock	true
+render	flac	flac	tone.flac
+interaction	flac	io_lock	true
+render	m4a	m4a	tone.m4a
+interaction	m4a	io_lock	true
+render	aac	aac	tone.aac
+interaction	aac	io_lock	true
+render	opus	opus	tone.opus
+interaction	opus	io_lock	true

@@ -1,0 +1,169 @@
+{
+  "windowsWebGPU": {
+    "checks": {
+      "lantern.i3d": {
+        "type": "i3d",
+        "tools": [
+          "area",
+          "sphere",
+          "box",
+          "pick"
+        ],
+        "contexts": [
+          "webgpu"
+        ],
+        "gpu": {
+          "description": "nvidia",
+          "fallback": false
+        },
+        "colors": 1369,
+        "scenarios": [
+          {
+            "id": "flicker",
+            "seconds": 16,
+            "changed": true,
+            "completed": true,
+            "replayed": true,
+            "reset": true
+          }
+        ]
+      }
+    },
+    "errors": [],
+    "expected404": [
+      ".alembic/tree.txt",
+      ".alembic/tree.txt",
+      ".alembic/canvases/8c8e1e46-940c-453c-922b-0ee5e13444f5.json",
+      ".alembic/selection.json",
+      ".alembic/tree.txt",
+      ".alembic/tree.txt",
+      ".alembic/tree.txt",
+      ".alembic/tree.txt",
+      ".alembic/tree.txt",
+      ".alembic/tree.txt",
+      ".alembic/tree.txt"
+    ],
+    "material": {
+      "backend": "WebGPU",
+      "time": 0,
+      "frames": 6552,
+      "compiled": [
+        {
+          "name": "Patinated bronze",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Worn brass edges",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Blackened metal",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Blue basalt",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Slate pebbles",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Warm ivory wax",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Slow flicker flame",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Soft amber glow",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Clear glass",
+          "ready": true,
+          "error": ""
+        }
+      ]
+    },
+    "pixelComparison": "Renderer canvas; host playback popup excluded"
+  },
+  "wslWebGL2": {
+    "checks": {},
+    "errors": [],
+    "gpu": "ANGLE (Microsoft Corporation, D3D12 (NVIDIA GeForce RTX 5060 Ti), OpenGL ES 3.1)",
+    "playback": {
+      "animated": true,
+      "declaredSeconds": 16,
+      "reset": true
+    },
+    "strictResetDifference": {
+      "pixels": 13,
+      "maxChannelDelta": 2,
+      "channelRange": 255
+    },
+    "material": {
+      "backend": "WebGL2",
+      "frames": 85,
+      "time": 0,
+      "compiled": [
+        {
+          "name": "Patinated bronze",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Worn brass edges",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Blackened metal",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Blue basalt",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Slate pebbles",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Warm ivory wax",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Slow flicker flame",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Soft amber glow",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Clear glass",
+          "ready": true,
+          "error": ""
+        }
+      ]
+    }
+  },
+  "visualReview": "Full carrying ring and round base fit inside the view. Restrained bronze, slate and amber colors; no visible text in the 3D canvas.",
+  "resetComparison": "Windows renderer canvas matches exactly. WSL WebGL2 strict comparison differs at 13 pixels, with maximum channel delta 2/255; camera and shader time match."
+}

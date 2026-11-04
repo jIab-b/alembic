@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "file": "frontend.iframe/index.html",
+  "canvasId": "2d01c94a-4384-4cae-a265-cf5c4299f0d2",
+  "sha256": "7a6a3a81fa4608668f55c226a1968b0afb58e1764644db49abacf668913f68db",
+  "at": "2026-11-03T20:16:24.466Z",
+  "selections": [
+    {
+      "id": "s3",
+      "tag": "can u see the area i selected , in terms of both metadata / image data or what .",
+      "shape": "area",
+      "area": [
+        0.6170009551098377,
+        0.19080459770114944,
+        0.011461318051575908,
+        0.09425287356321838
+      ],
+      "objects": [
+        {
+          "selector": "#app > div > aside:nth-of-type(2) > div > div:nth-of-type(2) > section > div > div > div:nth-of-type(2) > div:nth-of-type(1)",
+          "name": "div \"mock-session-ready\""
+        },
+        {
+          "id": "state",
+          "name": "State: iframe-success"
+        }
+      ],
+      "crop": ".alembic/crops/bbacf78a-4d32-4007-b9fe-9f5ea390c928/s3-299e9065-de7a-491a-8cb2-9f15431755d0.png"
+    }
+  ]
+}

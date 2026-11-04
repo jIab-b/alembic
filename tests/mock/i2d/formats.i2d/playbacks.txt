@@ -1,0 +1,10 @@
+playbacks-index	2
+scenario	png	png	png	0.6	none	"media.style.opacity=0.3;"
+scenario	jpg	jpg	jpg	0.6	none	"media.style.opacity=0.3;"
+scenario	jpeg	jpeg	jpeg	0.6	none	"media.style.opacity=0.3;"
+scenario	webp	webp	webp	0.6	none	"media.style.opacity=0.3;"
+scenario	gif	gif	gif	0.6	none	"media.style.opacity=0.3;"
+scenario	avif	avif	avif	0.6	none	"media.style.opacity=0.3;"
+scenario	sprite	sprite	sprite	0.6	none	"media.style.opacity=0.3;"
+scenario	sprites	sprites	sprites	0.6	none	"media.style.opacity=0.3;"
+scenario	unknown	Unknown	png	unknown	none	"media.style.opacity=0.3;"

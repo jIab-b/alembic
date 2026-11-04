@@ -1,0 +1,11 @@
+<!doctype html><style>html,body,canvas{margin:0;width:100%;height:100%;display:block;overflow:hidden}canvas{outline:none}</style><canvas tabindex="0"></canvas><script type="module">
+import {Engine,Scene,ArcRotateCamera,Vector3,HemisphericLight,CreateBox,bindRender} from '/assets/play/renderer.js';
+const canvas=document.querySelector('canvas'),engine=new Engine(canvas,true,{preserveDrawingBuffer:false,failIfMajorPerformanceCaveat:true}),scene=new Scene(engine);
+scene.useRightHandedSystem=true;scene.clearColor.set(.196,.235,.294,1);
+const camera=new ArcRotateCamera('inspect',1,1,6,Vector3.Zero(),scene);camera.setPosition(new Vector3(3,2,5));camera.fov=42*Math.PI/180;
+new HemisphericLight('light',new Vector3(0,1,0),scene);const box=CreateBox('box',{size:1.5},scene);box.id='authored-box';
+window.effects={keys:0,mouse:0,frames:[],io:false};
+addEventListener('keydown',e=>{if(effects.io&&e.code==='KeyK'){effects.keys++;box.position.x+=.1}});canvas.addEventListener('pointermove',()=>{if(effects.io)effects.mouse++});
+fetch('_deps/child/game.html').then(r=>{if(!r.ok)return r.text().then(text=>{throw Error(text)})});const binding=await bindRender({scene,camera,scenarios:['move'],interaction:{release(){},io_lock:on=>effects.io=on},play:async script=>new Function('box',script)(box),reset:()=>box.position.set(0,0,0)});
+window.fixture={scene,camera,box,binding};engine.runRenderLoop(()=>{effects.frames.push(performance.now());if(effects.frames.length>240)effects.frames.shift();scene.render()});
+</script>

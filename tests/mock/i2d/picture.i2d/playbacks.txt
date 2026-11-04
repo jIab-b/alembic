@@ -1,0 +1,4 @@
+playbacks-index	2
+scenario	color	Color	main	0.6	none	"media.querySelector('rect').setAttribute('fill','#ff0000');"
+scenario	alternate	Alternate	alternate	0.6	none	"document.querySelector('#shape').style.background='#c85b4a';"
+scenario	unknown	Unknown	main	unknown	none	"media.querySelector('rect').setAttribute('fill','#ff0000');"

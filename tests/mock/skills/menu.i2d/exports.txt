@@ -1,0 +1,3 @@
+exports-index	1
+render	menu	html2d	menu.html
+interaction	menu	io_lock	true

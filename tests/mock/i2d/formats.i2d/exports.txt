@@ -1,0 +1,17 @@
+exports-index	1
+render	png	png	image.png
+interaction	png	io_lock	true
+render	jpg	jpg	image.jpg
+interaction	jpg	io_lock	true
+render	jpeg	jpeg	image.jpeg
+interaction	jpeg	io_lock	true
+render	webp	webp	image.webp
+interaction	webp	io_lock	true
+render	gif	gif	image.gif
+interaction	gif	io_lock	true
+render	avif	avif	image.avif
+interaction	avif	io_lock	true
+render	sprite	sprite	sprite.json
+interaction	sprite	io_lock	true
+render	sprites	sprites	sprite.json
+interaction	sprites	io_lock	true

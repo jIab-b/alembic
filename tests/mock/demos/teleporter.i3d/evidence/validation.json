@@ -1,0 +1,477 @@
+{
+  "webgpu": {
+    "checks": {
+      "teleporter.i3d": {
+        "type": "i3d",
+        "tools": [
+          "area",
+          "sphere",
+          "box",
+          "pick"
+        ],
+        "contexts": [
+          "webgpu"
+        ],
+        "gpu": {
+          "description": "nvidia",
+          "fallback": false
+        },
+        "colors": 3530,
+        "scenarios": [
+          {
+            "id": "awakening",
+            "seconds": 14,
+            "changed": true,
+            "completed": true,
+            "replayed": true,
+            "reset": true,
+            "resetDrift": 0.00011522399192200655
+          }
+        ]
+      }
+    },
+    "errors": [],
+    "material": {
+      "backend": "WebGPU",
+      "compiled": [
+        {
+          "name": "Painted basalt \u2022 UV atlas",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Weathered brass",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Aether crystal shader",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 0",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 1",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 2",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 3",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 4",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 5",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 6",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 7",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 8",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 9",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 10",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 11",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 12",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 13",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 14",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 15",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 16",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 17",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 18",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 19",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 20",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 21",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 22",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 23",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Logarithmic aether vortex",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Portal radiance",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Aether motes",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Violet discharge sparks",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Crystal halo",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Crystal halo",
+          "ready": true,
+          "error": ""
+        }
+      ]
+    },
+    "powerUp": {
+      "time": 9.952600000023843,
+      "power": 1,
+      "playing": true,
+      "sparks": 72
+    }
+  },
+  "webgl2": {
+    "checks": {
+      "teleporter.i3d": {
+        "type": "i3d",
+        "tools": [
+          "area",
+          "sphere",
+          "box",
+          "pick"
+        ],
+        "contexts": [
+          "webgl2"
+        ],
+        "gpu": {
+          "description": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5060 Ti (0x00002D04) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "fallback": false
+        },
+        "colors": 3527,
+        "scenarios": [
+          {
+            "id": "awakening",
+            "seconds": 14,
+            "changed": true,
+            "completed": true,
+            "replayed": true,
+            "reset": true,
+            "resetDrift": 8.927660442811958e-05
+          }
+        ]
+      }
+    },
+    "errors": [],
+    "material": {
+      "backend": "WebGL2",
+      "compiled": [
+        {
+          "name": "Painted basalt \u2022 UV atlas",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Weathered brass",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Aether crystal shader",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 0",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 1",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 2",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 3",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 4",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 5",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 6",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 7",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 8",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 9",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 10",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 11",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 12",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 13",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 14",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 15",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 16",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 17",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 18",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 19",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 20",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 21",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 22",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Runic ignition 23",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Logarithmic aether vortex",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Portal radiance",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Aether motes",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Violet discharge sparks",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Crystal halo",
+          "ready": true,
+          "error": ""
+        },
+        {
+          "name": "Crystal halo",
+          "ready": true,
+          "error": ""
+        }
+      ]
+    },
+    "powerUp": {
+      "time": 9.967600000023841,
+      "power": 1,
+      "playing": true,
+      "sparks": 72
+    }
+  },
+  "bake": {
+    "backend": "CUDA",
+    "device": "NVIDIA GeForce RTX 5060 Ti",
+    "samples": 24,
+    "size": 768,
+    "blender": "4.5.4 LTS",
+    "imagesEmbeddedInGLB": 2,
+    "uvMappedMeshes": 83,
+    "triangles": 14104
+  },
+  "visualReview": "Reviewed the updated model in the CUDA proof and native WebGPU view. Six upper-left stones have distinct closed-loop cyan sigils on darker charcoal stone. Color and emission SVG paths match. Other existing atlas tiles and model geometry remain unchanged. Both GPU paths render without errors; the 14-second power-up completes, replays and resets with zero measured pixel drift. Fast violet vortex and 72 sparks remain present.",
+  "portalRevision": {
+    "angularSpeedRadiansPerSecond": 2.1,
+    "previousAngularSpeed": 0.72,
+    "palette": "violet with lavender rim",
+    "sparks": 72,
+    "sparkMotion": "short-lived outward spiral streaks",
+    "playbackSeconds": 14
+  },
+  "artRevision": {
+    "selectedStones": [
+      "Runestone_18",
+      "Runestone_19",
+      "Runestone_20",
+      "Runestone_21",
+      "Runestone_22",
+      "Runestone_23"
+    ],
+    "pattern": "six closed-loop celestial sigils with interlocking diamonds and orbital rings",
+    "stone": "dark charcoal faces and edges",
+    "verification": {
+      "stone-runes.svg": {
+        "changedTiles": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "otherExistingTilesUnchanged": true
+      },
+      "rune-emission.svg": {
+        "changedTiles": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "otherExistingTilesUnchanged": true
+      },
+      "geometry": "All vertices, normals and indices unchanged; only six selected stones use the new dark side swatch."
+    },
+    "packedBlendAndGLBRebaked": true
+  }
+}

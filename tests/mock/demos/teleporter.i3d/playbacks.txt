@@ -1,0 +1,2 @@
+playbacks-index	2
+scenario	awakening	Awaken the Aether Gate	main	14	none	"{\"effect\":\"power-up\"}"

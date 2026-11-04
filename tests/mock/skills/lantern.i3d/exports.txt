@@ -1,0 +1,3 @@
+exports-index	1
+render	main	babylon	index.html
+interaction	main	io_lock	true

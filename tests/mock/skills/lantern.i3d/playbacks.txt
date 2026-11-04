@@ -1,0 +1,2 @@
+playbacks-index	2
+scenario	flicker	Slow lantern flicker	main	16	none	"{\"effect\":\"flicker\"}"

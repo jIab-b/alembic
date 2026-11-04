@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+  <defs>
+    <radialGradient id="night"><stop stop-color="#281720"/><stop offset=".58" stop-color="#100f19"/><stop offset="1" stop-color="#070a11"/></radialGradient>
+    <radialGradient id="aura"><stop stop-color="#ff6b24" stop-opacity=".25"/><stop offset=".7" stop-color="#ed3418" stop-opacity=".07"/><stop offset="1" stop-color="#e62d19" stop-opacity="0"/></radialGradient>
+    <linearGradient id="metal" x1="0" x2="1" y2="1"><stop stop-color="#6b4248"/><stop offset=".32" stop-color="#302b3b"/><stop offset="1" stop-color="#10131f"/></linearGradient>
+    <linearGradient id="edge" x1="0" x2="1" y2="0"><stop stop-color="#b64c40"/><stop offset=".55" stop-color="#f59358"/><stop offset="1" stop-color="#732d39"/></linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c65440"/><stop offset=".45" stop-color="#75303a"/><stop offset="1" stop-color="#301c30"/></linearGradient>
+    <linearGradient id="horn" x1="0" x2=".7" y2="1"><stop stop-color="#ffcb83"/><stop offset=".25" stop-color="#9d5a51"/><stop offset="1" stop-color="#392a38"/></linearGradient>
+    <linearGradient id="cloak" x1="0" x2="1" y2=".5"><stop stop-color="#191527"/><stop offset=".6" stop-color="#4c2334"/><stop offset="1" stop-color="#9c3a3c"/></linearGradient>
+    <linearGradient id="fire" x1="0" y1="1" x2=".25" y2="0"><stop stop-color="#fff0b1"/><stop offset=".28" stop-color="#ffc451"/><stop offset=".6" stop-color="#ff6524"/><stop offset="1" stop-color="#db2737" stop-opacity=".3"/></linearGradient>
+    <linearGradient id="crown-violet" x1="0" y1="1" x2=".25" y2="0"><stop stop-color="#f6e9ff"/><stop offset=".28" stop-color="#d5a0ff"/><stop offset=".6" stop-color="#9e4dff"/><stop offset="1" stop-color="#5916c9" stop-opacity=".5"/></linearGradient>
+    <linearGradient id="trail"><stop stop-color="#e52338" stop-opacity="0"/><stop offset=".55" stop-color="#ff5e27" stop-opacity=".65"/><stop offset="1" stop-color="#fff1b3"/></linearGradient>
+    <radialGradient id="release-light"><stop stop-color="#fff8d6" stop-opacity=".95"/><stop offset=".2" stop-color="#ffd781" stop-opacity=".8"/><stop offset=".55" stop-color="#ff7738" stop-opacity=".3"/><stop offset="1" stop-color="#ff4828" stop-opacity="0"/></radialGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16"/></filter>
+  </defs>
+
+  <path fill="url(#night)" d="M0 0H1280V800H0z"/>
+  <ellipse cx="475" cy="395" rx="410" ry="355" fill="url(#aura)"/>
+  <!-- Broken eclipse; the empty right-hand field is the arrow's flight path. -->
+  <g fill="none" stroke="#d3583b">
+    <circle cx="456" cy="354" r="227" stroke-width="1" opacity=".15"/>
+    <path d="M269 482A227 227 0 0 1 526 138M600 178A227 227 0 0 1 676 413" stroke-width="3" opacity=".3"/>
+    <path d="M229 329l-13-2m34-72-12-6m55-58-8-10m79-37-4-13m89 7v-14m84 31 5-12m64 60 10-9m29 82 14-4" opacity=".4"/>
+  </g>
+  <g fill="#151420" stroke="#30202a" stroke-width="1">
+    <path d="M0 644l76-19 80 17 100-30 92 19 91-9 96 16 105-14 109 18 104-14 107 29 93-11 122 24v130H0z"/>
+    <path d="M190 661l37-35 87 6 32 25-66 14zM440 655l49-31 64 21 30 27-80 14zM617 678l59-40 84 7 21 31-80 14z"/>
+  </g>
+  <ellipse id="ground-light" cx="468" cy="649" rx="178" ry="18" fill="#f44b24" opacity=".22" filter="url(#soft)"/>
+  <ellipse cx="458" cy="654" rx="137" ry="12" fill="#04060d" opacity=".7"/>
+  <g fill="none" stroke="#f16a38" stroke-linecap="round">
+    <path d="M224 670l65 5 22 15 59-9 34 13m153-22 34 13 59-3 23 12 45-6" opacity=".35"/>
+    <path d="M353 648l39-4 13 6 28-2m76 12 28-4 21 8" opacity=".7"/>
+  </g>
+
+  <g id="breathing">
+    <!-- Trailing, burnt mantle and rear silhouette. -->
+    <g id="mantle">
+      <path d="M425 322C373 329 354 374 311 394L350 390 290 451 328 441 273 516 314 502 295 552 346 532 331 580 385 557 422 569 451 492 456 363z" fill="url(#cloak)" stroke="#9d4c46" stroke-width="2"/>
+      <path d="M414 353C373 402 391 466 333 535l45-19-14 28 43-25 29-103M385 363l-28 83-42 45" fill="none" stroke="#b14c42" opacity=".4"/>
+      <path d="M298 550l18-44-3 27 33-12-24 30 13-8-7 25 23-18" fill="none" stroke="#ff9c45" stroke-width="2" filter="url(#glow)"/>
+    </g>
+    <path d="M444 461l-28 74-37 78-3 31 28 3 41-81 39-64z" fill="url(#metal)" stroke="#8e4e49" stroke-width="2"/>
+    <path d="M462 476l48 46 20 88 23 30-29 8-36-37-25-66-31-30z" fill="url(#metal)" stroke="#995247" stroke-width="2"/>
+    <path d="M397 563l28-11-15 28-18 9zM492 556l28 2 6 29-24-12z" fill="#754246" stroke="#d47550"/>
+    <path d="M380 610l23 1-2 27 15 14-52 3 4-15zM520 610l17-4 15 28 26 14-1 7-56-3-10-19z" fill="#171824" stroke="#9b5e50" stroke-width="2"/>
+    <path d="M374 645l29-3m120 1 31-4" stroke="#ff9951" stroke-width="2"/>
+    <path d="M435 343C447 329 473 334 488 352l8 55-20 61-53-3-13-65z" fill="url(#skin)" stroke="#3b1e2d" stroke-width="3"/>
+    <path d="M421 378l38 17 32-24-8 50-24 28-38-30z" fill="url(#metal)" stroke="#a15c50" stroke-width="2"/>
+    <path d="M459 397l1 44m-33-45 17 14m38-18-14 14" fill="none" stroke="#ff8c4b" stroke-width="2" filter="url(#glow)"/>
+    <path d="M427 439l48 4 10 24-62 7-9-18z" fill="#24202d" stroke="#ae6350" stroke-width="2"/>
+    <path d="M448 447l16 1 8 12-17 9-13-13z" fill="#b15b43"/><path d="M452 453l9 1-5 8z" fill="#ffc56d"/>
+    <path d="M420 470l23 2-7 56-31 16zM449 475l22-5 24 51-29-10-13 17z" fill="url(#cloak)" stroke="#a65849" stroke-width="2"/>
+    <!-- The extended bow arm. -->
+    <path d="M477 348Q492 338 511 344L567 349 636 339 651 346 649 361 572 370 502 369 480 365z" fill="url(#skin)" stroke="#3b2030" stroke-width="3"/>
+    <path d="M556 347l26-3 13 23-27 6z" fill="url(#metal)" stroke="#cd7958" stroke-width="2"/>
+    <path d="M564 348l12 20m-4-20 12 19" stroke="#e3a26c" opacity=".6"/>
+    <path d="M628 342l17-7 17 7-1 15-16 9-15-5z" fill="#bd634d" stroke="#4b2936" stroke-width="2"/>
+    <path d="M648 342l8 3-1 13m-15-14 8 5-1 12" fill="none" stroke="#e69262"/>
+    <!-- Serrated shoulder plate. -->
+    <path d="M410 339l-22-26 27 9-3-27 23 27 13-17 5 25 24 19-18 22-31-7z" fill="url(#metal)" stroke="#bd6a54" stroke-width="2"/>
+    <path d="M413 341l20-7 22 16-18 3z" fill="#5b3942"/>
+    <!-- Crown flames, carved horns and angular face. -->
+    <g id="crown-fire" fill="url(#crown-violet)" opacity=".9" filter="url(#glow)">
+      <g transform="translate(451 318) scale(1 1.65) translate(-451 -318)">
+        <path d="M424 299C394 274 423 253 406 217c30 16 14 47 37 48-10-31 13-38 7-66 29 26 4 52 28 65-5-22 16-32 19-49 14 42-1 61-9 86z"/>
+        <path d="M418 318c-34-12-34-34-28-52 11 16 7 23 28 29z"/>
+      </g>
+    </g>
+    <path d="M437 319l2 27 24 10 16-15-15-29z" fill="url(#skin)" stroke="#402030" stroke-width="2"/>
+    <path d="M430 264l-25-22-11-40 19 20 22 10 15 30zM464 258l21-28 7-37 9 27-1 29-24 27z" fill="url(#horn)" stroke="#b66b51" stroke-width="2"/>
+    <path d="M404 223l13 9m-10 4 17 6m66-16 9 5m-13 8 12 4" stroke="#432638" stroke-width="3"/>
+    <path d="M429 260l26-12 28 19 9 22-8 17-6 23-20 12-23-16-12-32z" fill="url(#skin)" stroke="#e08555" stroke-width="2"/>
+    <path d="M431 261l24 11 15-15 4 31 18 1-14 16-3 19-15 12-1-31-25-13z" fill="#292130"/>
+    <path d="M432 283l20 6-6 8-13-6zM468 288l16-7-3 11-12 4z" fill="#ffe49a" filter="url(#glow)"/>
+    <path d="M460 298l-7 17 10 2m-13 5 14 2 9-8" fill="none" stroke="#f39361" stroke-width="2"/>
+    <path d="M449 322l4 8 3-7m9-1 1 6 5-9" fill="#fbd09a"/>
+    <path d="M428 298l-13 7 16 9m50-45 14 1-8 7" fill="#a95446"/>
+    <!-- Near arm and drawing hand move with the bowstring. -->
+    <path id="draw-arm" d="M447 356Q429 353 424 376L449 394 638 357 635 344 450 374 465 363z" fill="url(#skin)" stroke="#422131" stroke-width="3"/>
+    <path id="draw-bracer" d="M583 355l40-8 5 16-39 10z" fill="url(#metal)" stroke="#ca7754" stroke-width="2"/>
+    <g id="draw-hand" transform="translate(638 350)">
+      <path d="M-13-8l14-5 10 6-1 17-13 5-12-7z" fill="#bd6249" stroke="#482332" stroke-width="2"/>
+      <path d="M-3-9l5 6-1 12m-7-14 4 6-2 6" fill="none" stroke="#f5a16d"/>
+    </g>
+    <!-- Organic recurve bow, tall enough to read immediately in silhouette. -->
+    <g id="bow">
+      <path id="bow-limb" d="M639 181C707 215 697 279 662 338L660 362C699 425 695 479 637 520" fill="none" stroke="#1c1724" stroke-width="15"/>
+      <path id="bow-edge" d="M639 181C707 215 697 279 662 338L660 362C699 425 695 479 637 520" fill="none" stroke="url(#edge)" stroke-width="8"/>
+      <path d="M639 181l-9-22 24 18-4 14M637 520l-8 22 24-18-6-14M684 230l23-10-17 29M684 466l23 10-17-29" fill="url(#horn)" stroke="#bd7054" stroke-width="1.5"/>
+      <path id="bow-string" d="M639 181L638 350 637 520" fill="none" stroke="#ffd49b" stroke-width="1.5" opacity=".9"/>
+      <path d="M658 335l8 1-1 31-10-1z" fill="#2d202b" stroke="#e08b5a" stroke-width="2"/>
+      <path d="M658 342l7 3m-8 4 7 3m-7 4 7 3" stroke="#ea9a62"/>
+      <path d="M654 195c23 14 24 25 28 40m-29 271c21-14 26-27 29-39" fill="none" stroke="#ffad54" stroke-width="2" filter="url(#glow)"/>
+    </g>
+    <g id="flight-trail" opacity="0" filter="url(#glow)">
+      <path id="trail-ribbon" d="M0 0" fill="url(#trail)"/>
+      <path id="trail-flames" d="M0 0" fill="url(#fire)"/>
+      <path id="trail-core" d="M0 0" fill="none" stroke="#ffe8a5" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <g id="arrow" transform="translate(638 350)">
+      <path d="M-7-1H185" fill="none" stroke="#fbc37c" stroke-width="3"/>
+      <path d="M4-1l-18-11-12 2L-9 0l-17 9 13 2L5 1" fill="#bf5a43" stroke="#e8995c"/>
+      <g id="arrow-fire" filter="url(#glow)">
+        <path d="M198 0C174-19 160-10 144-23l8 16c-21-5-35-1-51-8l22 17-17 8c25-4 37 10 52 2l-10 13c20-3 30-10 50-25z" fill="url(#fire)"/>
+        <path d="M199 0l-37-8 12 8-13 8z" fill="#fff0b0"/>
+      </g>
+      <path d="M176-6l23 6-23 6 5-6z" fill="#fff5cf"/>
+    </g>
+    <g id="release-flash" opacity="0" fill="#ffda88" filter="url(#glow)">
+      <circle cx="662" cy="350" r="82" fill="url(#release-light)"/>
+      <path d="M662 288l7 53 54 9-54 7-7 55-8-55-53-7 53-9z" fill="#fff4c3"/>
+      <path d="M630 318l26 25 32-20-19 28 26 31-32-23-29 24 21-31z" opacity=".65"/>
+      <circle id="release-ring" cx="662" cy="350" r="14" fill="none" stroke="#ffbd6b" stroke-width="2"/>
+    </g>
+  </g>
+
+  <g id="embers" fill="#ffa557" filter="url(#glow)">
+    <circle cx="326" cy="423" r="2"/><circle cx="359" cy="286" r="1.7"/><circle cx="530" cy="226" r="2"/>
+    <circle cx="297" cy="546" r="1.7"/><circle cx="585" cy="451" r="1.5"/><circle cx="401" cy="197" r="1.5"/>
+    <circle cx="477" cy="583" r="2"/><circle cx="554" cy="305" r="1.4"/><circle cx="602" cy="568" r="1.5"/>
+    <circle cx="373" cy="488" r="1.2"/><circle cx="484" cy="174" r="1.4"/><circle cx="699" cy="559" r="1.2"/>
+  </g>
+  <g id="shot-sparks" fill="#ffc875" opacity="0" filter="url(#glow)">
+    <circle r="2"/><circle r="1.5"/><circle r="2.5"/><circle r="1"/><circle r="2"/><circle r="1.5"/>
+    <circle r="2"/><circle r="1.5"/><circle r="2.5"/><circle r="1"/><circle r="2"/><circle r="1.5"/>
+  </g>
+</svg>

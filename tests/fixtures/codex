@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+# Synthetic terminal agent: records actual terminal input; calls no model.
+from pathlib import Path
+print('fixture-agent-ready', flush=True)
+while True:
+    try:
+        line = input()
+    except EOFError:
+        break
+    Path('prompt.txt').write_text(line + '\n')
+    print('fixture-agent-received', flush=True)

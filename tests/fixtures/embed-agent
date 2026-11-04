@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+# Synthetic agent, real PTY input, zero model calls.
+import os
+from pathlib import Path
+print('\x1b[?2004hfixture-agent-ready',flush=True)
+while True:
+    try: line=input()
+    except EOFError: break
+    Path('prompt.txt').write_text(line+'\n')
+    Path('receiver-session.txt').write_text(os.environ['ALEMBIC_SESSION'])
+    print('fixture-agent-received',flush=True)

@@ -1,0 +1,4 @@
+playbacks-index	2
+scenario	idle	Idle · on watch	main	6	none	"{\"animation\": \"idle\"}"
+scenario	walk	Walk cycle · patrol	main	6.3	none	"{\"animation\": \"walk\"}"
+scenario	shoot	Draw, release & hit target	main	9	none	"{\"animation\": \"shoot\"}"

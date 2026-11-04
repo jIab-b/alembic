@@ -1,0 +1,75 @@
+// Headless shared frontend against mock HTTP and a controllable mock WebSocket.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {mockNode} from './mock-node.mjs';
+import {mockHttp} from './mock-http.mjs';
+const require = createRequire(import.meta.url);
+
+async function fixture(replacement = false) {
+  const node = mockNode();
+  node.live.set('.alembic/tree.txt', Buffer.from(JSON.stringify({version:1,hidden:['internal.txt']})));
+  node.live.set('internal.txt', Buffer.from('Internal'));
+  node.live.set('.secret', Buffer.from('Private'));
+
+  return mockHttp(node, (request, response, url) => {
+    if (!replacement) return false;
+    const routes = {'/vms':[{id:'other',workspace:'w2'},{id:'new-vm',workspace:'w1'}],
+      '/vms/new-vm/sessions':[]};
+    if (!(url.pathname in routes)) return false;
+    response.writeHead(200, {'Content-Type':'application/json'}).end(JSON.stringify(routes[url.pathname]));
+    return true;
+  });
+}
+
+test('agent pane keeps installed commands, project prompt and direct collapse in one sandbox PTY', {timeout:15000}, async t => {
+  let chromium;try {({chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright'))}catch(error){if(error.code==='MODULE_NOT_FOUND'){t.skip('Playwright unavailable');return}throw error}
+  const server=await fixture();let browser;
+  try{
+    browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
+    const page=await browser.newPage({viewport:{width:1450,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+    await page.addInitScript(()=>{
+      class MockSocket {static OPEN=1;readyState=0;onopen=null;onmessage=null;onerror=null;onclose=null;sent=[];
+        constructor(){window.shells.push(this);setTimeout(()=>{this.readyState=1;this.onopen?.({});this.onmessage?.({data:'sandbox$ '})},20)}
+        addEventListener(){}send(value){this.sent.push(value);if(value.includes('ALEMBIC_PROJECT_NAME='))setTimeout(()=>this.onmessage?.({data:'\x1b[2J\x1b[HSupported agents:\r\ncodex\r\n\r\ntest $ '}),0)}close(){this.readyState=3;this.onclose?.({})}}
+      window.shells=[];window.WebSocket=MockSocket;
+    });
+    await page.goto(server.origin+'/#'+new URLSearchParams({node:server.origin,token:'test-token',workspace:'w1',vm:'v1',agents:'codex'}));await page.evaluate(()=>window.__alembic.ready());
+    await page.waitForFunction(()=>window.shells.length===1&&window.shells[0].readyState===1);
+    assert.equal(await page.getByRole('combobox',{name:'Agent provider'}).count(),0);
+    assert.equal(await page.getByRole('textbox',{name:'Message the agent'}).count(),0);
+    assert.equal(await page.locator('.native-agent-terminal .controls').count(),0);
+    await page.locator('.native-agent-terminal').getByText('Supported agents:',{exact:false}).waitFor();
+    assert.equal(await page.getByRole('button',{name:'Agent connection',exact:true}).getAttribute('title'),'Not connected');
+    assert.equal((await page.getByRole('button',{name:'Collapse agent',exact:true}).innerText()).trim(),'‹');
+    const input=page.locator('.native-agent-terminal .xterm-helper-textarea');await input.focus();
+    await page.keyboard.type('ls');await page.keyboard.press('Enter');await page.keyboard.type('cd ..');await page.keyboard.press('Enter');await page.keyboard.type('codex --help');await page.keyboard.press('Enter');await page.keyboard.press('Tab');await page.keyboard.press('Escape');await page.keyboard.press('Control+c');
+    const sent=await page.evaluate(()=>window.shells[0].sent);
+    assert.ok(sent.some(s=>s.startsWith('\0{"resize":')));assert.ok(sent.join('').includes('ls\rcd ..\rcodex --help\r\t\x1b\x03'));
+    await page.getByRole('button',{name:'Agent connection',exact:true}).click();
+    await page.locator('.help-content:popover-open').waitFor();
+    await page.getByText('No agents connected',{exact:true}).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:'note.txt',exact:true}).click();assert.equal(await page.evaluate(()=>window.shells.length),1);
+    await page.getByRole('button',{name:'Collapse agent',exact:true}).click();await page.getByRole('button',{name:'Open agent',exact:true}).click();assert.equal(await page.evaluate(()=>window.shells.length),1);
+    assert.equal(server.node.calls.filter(c=>c.path.endsWith('/shell/ticket')).length,1);
+    assert.equal(server.node.calls.filter(c=>c.path.includes('/native-codex')||c.path.endsWith('/launch')).length,0);assert.deepEqual(errors,[]);
+  }finally{await browser?.close();await server.close()}
+});
+
+test('headless startup refreshes a stale saved VM within its existing workspace', {timeout:30000}, async t => {
+  let chromium; try { ({chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright')); }
+  catch (error) { if (error.code === 'MODULE_NOT_FOUND') { t.skip('Playwright unavailable'); return; } throw error; }
+  const server=await fixture(true); let browser;
+  try {
+    browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
+    const page=await browser.newPage();
+    await page.goto(server.origin+'/#'+new URLSearchParams({node:server.origin,token:'test-token',workspace:'w1',vm:'old-vm',agents:'codex'}));
+    await page.evaluate(()=>window.__alembic.ready());
+    const saved=await page.evaluate(()=>localStorage.getItem('alembic-connection:w1'));
+    const params=new URLSearchParams(saved);
+    assert.equal(params.get('vm'),'new-vm');assert.equal(params.get('workspace'),'w1');assert.equal(params.get('token'),'test-token');
+    await page.reload(); await page.evaluate(()=>window.__alembic.ready());
+    assert.equal(new URLSearchParams(await page.evaluate(()=>sessionStorage.getItem('alembic-connection'))).get('vm'),'new-vm');
+  } finally { await browser?.close(); await server.close(); }
+});

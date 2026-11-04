@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambient menu</title>
+<style>
+  :root { color-scheme: dark; font-family: Georgia, 'Times New Roman', serif; }
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+  body { background: #101d24; color: #f1f1e7; }
+  .atmosphere { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .ambient { transform-origin: 800px 450px; }
+  .veil { position: fixed; inset: 0; background: linear-gradient(90deg, #101d2455, transparent 80%); pointer-events: none; }
+  main { position: relative; display: flex; align-items: center; width: 100%; height: 100%; padding: clamp(24px, 8vw, 120px); }
+  nav { width: clamp(260px, 39vw, 490px); margin-left: clamp(0px, 5vw, 80px); }
+  button { appearance: none; display: flex; align-items: center; position: relative; width: 100%; gap: 24px; padding: 25px 4px; border: 0; border-bottom: 1px solid #e3efe41c; background: transparent; color: #c0c9c5; font: inherit; font-size: clamp(32px, 4.4vw, 64px); letter-spacing: -.045em; text-align: left; cursor: pointer; outline: none; }
+  button:last-child { border-bottom-color: transparent; }
+  .marker { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #dbe9bd; opacity: 0; box-shadow: 0 0 18px #dbe9bd70; }
+  .arrow { margin-left: auto; width: 26px; height: 26px; color: #dbe9bd; opacity: 0; }
+  button[aria-pressed="true"] { color: #f1f1e7; }
+  button[aria-pressed="true"] .marker, button[aria-pressed="true"] .arrow { opacity: 1; }
+  button:hover { color: #fffef4; }
+  button:focus-visible { outline: 1px solid #dbe9bd88; outline-offset: 6px; border-radius: 2px; }
+  @media (max-width: 540px) { main { padding: 32px; } nav { width: 100%; margin: 0; } button { padding: 25px 0; gap: 20px; } }
+</style>
+</head>
+<body>
+<svg class="atmosphere" viewBox="0 0 1280 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <radialGradient id="teal"><stop stop-color="#4b8d82" stop-opacity=".52"/><stop offset="1" stop-color="#4b8d82" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gold"><stop stop-color="#c3bd7e" stop-opacity=".27"/><stop offset="1" stop-color="#c3bd7e" stop-opacity="0"/></radialGradient>
+    <radialGradient id="blue"><stop stop-color="#637caa" stop-opacity=".28"/><stop offset="1" stop-color="#637caa" stop-opacity="0"/></radialGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c6d4b4" stop-opacity=".04"/><stop offset=".48" stop-color="#c6d4b4" stop-opacity=".24"/><stop offset="1" stop-color="#c6d4b4" stop-opacity=".02"/></linearGradient>
+  </defs>
+  <g id="glow" class="ambient">
+    <ellipse cx="970" cy="330" rx="610" ry="500" fill="url(#teal)"/>
+    <ellipse cx="1110" cy="670" rx="440" ry="440" fill="url(#gold)"/>
+    <ellipse cx="350" cy="830" rx="700" ry="450" fill="url(#blue)"/>
+  </g>
+  <g id="contours" class="ambient" fill="none" stroke="url(#line)" stroke-width="1">
+    <ellipse cx="1030" cy="460" rx="380" ry="510" transform="rotate(34 1030 460)"/>
+    <ellipse cx="1030" cy="460" rx="410" ry="545" transform="rotate(34 1030 460)"/>
+    <ellipse cx="1030" cy="460" rx="440" ry="580" transform="rotate(34 1030 460)"/>
+    <ellipse cx="1030" cy="460" rx="470" ry="615" transform="rotate(34 1030 460)"/>
+  </g>
+</svg>
+<div class="veil"></div>
+<main>
+  <nav aria-label="Main menu">
+    <button type="button" aria-pressed="true" tabindex="0"><span class="marker" aria-hidden="true"></span><span>Start</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+    <button type="button" aria-pressed="false" tabindex="-1"><span class="marker" aria-hidden="true"></span><span>Settings</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+    <button type="button" aria-pressed="false" tabindex="-1"><span class="marker" aria-hidden="true"></span><span>Credits</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+  </nav>
+</main>
+<script>
+  const buttons = [...document.querySelectorAll('nav button')];
+  function select(index, focus = false) {
+    buttons.forEach((button, i) => {
+      button.setAttribute('aria-pressed', String(i === index));
+      button.tabIndex = i === index ? 0 : -1;
+    });
+    if (focus) buttons[index].focus();
+  }
+  buttons.forEach((button, index) => {
+    button.addEventListener('click', () => select(index));
+    button.addEventListener('keydown', event => {
+      let next;
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (index + 1) % buttons.length;
+      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (index + buttons.length - 1) % buttons.length;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = buttons.length - 1;
+      if (next !== undefined) { event.preventDefault(); select(next, true); }
+    });
+  });
+</script>
+<script>
+// Use the standard isolated media renderer for playback and IO.
+window.__alMedia = {
+  render: { id: 'menu', format: 'html2d', entry: 'menu.html' },
+  scenarios: [{ id: 'ambient', duration: 48 }],
+  exports: [], background: '#101d24', html: true
+};
+</script>
+<script type="module" src="/assets/play/media.js"></script>
+</body>
+</html>
