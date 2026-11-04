@@ -1,6 +1,6 @@
 <script lang="ts">
+  import {surfaceFor} from './contract/types.js';
   import {childNodes, openNodeDocument} from './canvas.js';
-  import {readNativeStream} from './native-stream.js';
   import {onDestroy} from 'svelte';
   import PlaybackChild from './PlaybackChild.svelte';
   import PlaybackAsset from './PlaybackAsset.svelte';
@@ -18,20 +18,8 @@
       const rows=[], discovered=[];
       for (const id of document.views) {
         const view=document.nodes.find((n:any)=>n.id===id);
-        if (view && /\.(glb|gltf)$/i.test(view.path)) { discovered.push(view);continue; }
-        if (!view || !/\.stream$/i.test(view.path) || view.application==='blender') continue;
-        let declared=view.actions;
-        if (declared?.length===0) continue;
-        let reason='';
-        try {
-          const stream=readNativeStream(await folder.read(view.path),view.path);
-          if (stream.application!=='godot') throw new Error('The view is not a Godot preview');
-          declared ??= stream.actions||[];
-          await folder.stat(stream.source);
-          if (stream.assembly) await folder.stat(stream.source.replace(/project\.godot$/, 'assemble.py'));
-        } catch (e) { reason=(e as Error).message; }
-        if (!declared && reason) throw new Error(reason);
-        for (const action of declared||[]) rows.push({view:id,label:action.label,key:action.key,reason});
+        if (view && surfaceFor(view.path).model) { discovered.push(view);continue; }
+
       }
       if (!target.open || current!==generation) return;
       actions=rows;assets=discovered;depthLimit=ancestors.length>=8;

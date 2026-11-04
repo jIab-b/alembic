@@ -1,13 +1,9 @@
 // Native Windows Chrome: real xterm paste and ordinary iframe adapter lifecycle.
-import {createRequire} from 'node:module';
-import {readFile,mkdtemp,rm} from 'node:fs/promises';
-import {join} from 'node:path';
+import {windowsBrowser} from './windows-browser.mjs';
+import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE||'playwright');
-const profile=await mkdtemp(join(process.env.TEMP,'alembic-ui-adapter-'));
-let context;
+const {context,dispose}=await windowsBrowser({viewport:{width:1000,height:700}});
 try {
- context=await chromium.launchPersistentContext(profile,{executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,ignoreDefaultArgs:['--enable-unsafe-swiftshader'],viewport:{width:1000,height:700}});
  await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:'http://localhost:18991'});
  const page=context.pages()[0];
  await page.route('http://localhost:18991/**',async route=>{
@@ -16,7 +12,9 @@ try {
    <script>window.messages=[];addEventListener('message',e=>{if(e.source===document.querySelector('#runtime').contentWindow)messages.push(e.data)})</script>
    <script src="/xterm.js"></script><script type="module">import {browserPasteKey} from '/paste.js';window.bytes=[];window.term=new Terminal();term.attachCustomKeyEventHandler(browserPasteKey);term.open(document.querySelector('#terminal'));term.onData(s=>bytes.push(s));window.loaded=true;</script>`});
   if(path==='/runtime')return route.fulfill({contentType:'text/html',body:`<!doctype html><button id="content">Ordinary HTML app</button><script>window.__alApp={renders:['app'],scenarios:[]};</script><script type="module" src="/__al/app.js"></script>`});
-  const files={'/xterm.js':'../frontend/node_modules/@xterm/xterm/lib/xterm.js','/paste.js':'../frontend/src/contract/terminal-paste.js','/__al/app.js':'../render/app.js','/assets/play/interaction.js':'../frontend/public/assets/play/interaction.js'};
+  const files={'/xterm.js':'../frontend/node_modules/@xterm/xterm/lib/xterm.js','/paste.js':
+    '../frontend/src/contract/terminal-paste.js','/__al/app.js':'../render/iframe/app.js',
+      '/assets/play/interaction.js':'../frontend/public/assets/play/interaction.js'};
   if(!files[path])return route.fulfill({status:404,body:'missing'});
   return route.fulfill({contentType:'text/javascript',body:await readFile(new URL(files[path],import.meta.url))});
  });
@@ -48,4 +46,4 @@ try {
  assert.equal((await command('alembic.web.interaction',{screen_lock:true})).ok,false,'2D app cannot acquire screen lock');
  await page.frameLocator('#runtime').locator('#content').waitFor();
  console.log('PASS: Ctrl+V pastes text once, Ctrl+C works, iframe readiness replays, reload recovers, 2D permissions stay strict');
-} finally {await context?.close();await rm(profile,{recursive:true,force:true})}
+} finally {await dispose()}

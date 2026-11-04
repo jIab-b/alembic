@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRequire} from 'node:module';
-const require=createRequire(new URL('../frontend/package.json',import.meta.url));
-const {PerspectiveCamera}=require('three');
 import {NativeCamera} from '../frontend/src/native-camera.js';
 function setup(){
- const camera=new PerspectiveCamera(60,1.6,.1,100);camera.position.set(0,0,5);camera.lookAt(0,0,0);camera.updateMatrixWorld();
- const state={clip:new (require('three').Matrix4)().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse).toArray(),view:camera.matrixWorldInverse.toArray(),world:camera.matrixWorld.toArray(),windowY:camera.projectionMatrix.elements[5],orthographic:false,distance:5,region:[0,0,1280,800],width:1280,height:800,sourceRevision:'a'.repeat(64)};
+ const f=1/Math.tan(Math.PI/6), c=-(100+.1)/(100-.1), d=-2*100*.1/(100-.1);
+ const state={clip:[f/1.6,0,0,0,0,f,0,0,0,0,c,-1,0,0,d-5*c,5],
+ view:[1,0,0,0,0,1,0,0,0,0,1,0,0,0,-5,1],world:[1,0,0,0,0,1,0,0,0,0,1,0,0,0,5,1],
+ windowY:f,orthographic:false,distance:5,region:[0,0,1280,800],width:1280,height:800,sourceRevision:'a'.repeat(64)};
  const requests=[],captures=[],native=new NativeCamera(async request=>{requests.push(request);return {camera:state,point:[0,0,0],objects:[{id:'blender:column',name:'column'}],context:{source:'/workspace/master.blend'}}},()=>({left:100,top:50,width:1000,height:1000}),async area=>{captures.push(area);return new Uint8Array([1])},'master.blend');native.update(state);return {native,requests,captures,state};
 }
 test('native camera respects source regions, letterboxing and world-unit handle drags',()=>{

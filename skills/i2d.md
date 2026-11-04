@@ -13,8 +13,9 @@ Use few elements, little text and a clear hierarchy. Text belongs only where it
 is the content (for example, menu choices); keep labels short. Avoid explanatory
 paragraphs, decorative badges, instructions and duplicate on-canvas controls.
 Use the frontend's existing prompt, IO and playback controls.
-HTML needs the existing render/playback binding shown in the HTML examples;
-a standalone HTML page without that handshake will time out as an i2d render.
+HTML imports `bindRender` from `/assets/play/html.js` and supplies `play(scenario)`,
+`reset()` and optional `io(on)` hooks. See the HTML example. The adapter implements
+the i2d port; a missing runtime binding fails visibly.
 
 Drive motion through top-level playback scripts in `playbacks.txt`, with declared
 length. The default view and armed scenario remain still until Play; reset

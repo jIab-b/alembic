@@ -94,8 +94,12 @@ def main():
         _, info = start(root, *command)
         if args.open:
             url = launch_url(info)
-            subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', "Start-Process '" +
-                url.replace("'", "''") + "'"], check=True, timeout=15)
+            if os.environ.get('WSL_DISTRO_NAME'):
+                subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+                    "Start-Process '" + url.replace("'", "''") + "'"], check=True, timeout=15)
+            else:
+                import webbrowser
+                webbrowser.open(url)
         print('Ready. Run backend/al url to obtain the private launch URL; backend/al attach to join its session.')
         return
     folder = location(root)

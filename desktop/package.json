@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "main": "main.cjs",
-  "description": "Shared Alembic viewer in a desktop window, connected to Vault directly or through SSH.",
+  "description": "Optional Electron shell for the Alembic backend",
   "scripts": {
     "start": "electron .",
     "package": "node package.cjs"

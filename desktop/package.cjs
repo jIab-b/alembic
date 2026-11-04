@@ -1,4 +1,4 @@
-// All platforms use the same shell and the frontend served by the existing Vault.
+// All platforms use the same shell and the frontend served by the existing backend.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {version}=require('electron/package.json');
 async function main() {

@@ -1,14 +1,9 @@
-// Native Windows Chrome against the disposable compiled-style app in test_app_assets.py.
-import {createRequire} from 'node:module';
-import {readFile,mkdtemp,rm} from 'node:fs/promises';import {join} from 'node:path';
+import {windowsBrowser} from './windows-browser.mjs';
+// Native Windows Chrome against the disposable compiled-style app in app-assets.py.
+import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const {chromium,firefox}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE||'playwright');
-const profile=await mkdtemp(join(process.env.TEMP,'alembic-ui-assets-'));
-let context;
-try{
- context=await (process.argv.includes('--firefox') ? firefox : chromium).launchPersistentContext(profile,process.argv.includes('--firefox')
-  ? {channel:'moz-firefox',executablePath:'C:/Program Files/Mozilla Firefox/firefox.exe',headless:true}
-  : {executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,ignoreDefaultArgs:['--enable-unsafe-swiftshader']});
+const {context, dispose} = await windowsBrowser();
+try {
  const page=context.pages()[0],failed=[];let bypasses=0;
  page.on('response',r=>{
   const path=new URL(r.url()).pathname;
@@ -38,4 +33,4 @@ try{
  assert.deepEqual(failed,[]);
  console.log('PASS: compiled app boots, loads absolute CSS/JS and nested imports, and reloads');
  }
-}finally{await context?.close();await rm(profile,{recursive:true,force:true})}
+}finally{await dispose()}

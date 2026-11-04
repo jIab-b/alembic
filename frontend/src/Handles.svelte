@@ -5,7 +5,7 @@
   // (a sphere becomes an oval); a corner dot stretches both, or on a sphere scales it whole. Shift works along
   // the depth axis instead. Volumes stay axis-aligned.
   import {onMount} from 'svelte';
-  import {half} from './gltf.js';
+  import {half} from '../../render/model.js';
   import type {Selection} from './history';
   type ViewFrame = {right: number[]; up: number[]; forward: number[]; scale: number};
   type Camera = {project(point: number[]): number[] | null; axes(): {right: number[]; up: number[]; forward: number[]}; dragFrame(point: number[]): ViewFrame};

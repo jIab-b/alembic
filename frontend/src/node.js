@@ -54,107 +54,31 @@ export class NodeClient {
     this.cache = new Map(); this.versions = new Map();
     this.pendingReads = new Map(); this.readRevision = 0;
     this.readiness={workspaceListed:false,vmVerified:false,rootTreeListed:false,error:''}; this.scope = new AbortController();
-    this.reconnecting = null; this.vmUnverified = false;
-    // Internal scheduling points let unit tests exercise gaps without waiting in real time.
-    this.reconnectDelays = [0, 250, 500, 1000, 1500, 1500, 1500, 1500, 1500, 1500, 1500];
+
   }
   w(op, query = {}) { return `/w/${encodeURIComponent(this.config.workspace)}/${op}?${new URLSearchParams(query)}`; }
   v(op) { return `/vms/${encodeURIComponent(this.config.vm)}/${op}`; }
-  async waitForVm(delay) {
-    this.scope.signal.throwIfAborted();
-    if (!delay) return;
-    await new Promise((resolve, reject) => {
-      const done = () => { this.scope.signal.removeEventListener('abort', abort); resolve(); };
-      const timer = setTimeout(done, delay);
-      const abort = () => { clearTimeout(timer); this.scope.signal.removeEventListener('abort', abort); reject(this.scope.signal.reason); };
-      this.scope.signal.addEventListener('abort', abort, {once: true});
-    });
+  async verifyConnection() {
+    const rows = await this.json('/vms');
+    const current = rows.find(row => row.id === this.config.vm);
+    this.connectionError = !current ? 'The project server is stopped or unavailable' :
+      current.workspace !== this.config.workspace ? 'The connection belongs to a different project' : '';
+    if (this.connectionError) throw Error(this.connectionError);
+    this.readiness.vmVerified = true;
   }
-  reconnectVm(missing) {
-    this.scope.signal.throwIfAborted();
-    if (this.config.vm !== missing) return Promise.resolve(true);
-    if (this.reconnecting) return this.reconnecting;
-    const pending = this.findReplacementVm(missing);
-    this.reconnecting = pending.finally(() => { this.reconnecting = null; });
-    return this.reconnecting;
-  }
-  async waitForRecovery(missing, signal) {
-    signal.throwIfAborted();
-    const pending = this.reconnectVm(missing);
-    if (signal === this.scope.signal) return pending;
-    // A cancelled caller need not wait for recovery shared with other live requests.
-    return new Promise((resolve, reject) => {
-      const abort = () => { signal.removeEventListener('abort', abort); reject(signal.reason); };
-      signal.addEventListener('abort', abort, {once: true});
-      pending.then(value => { signal.removeEventListener('abort', abort); resolve(value); },
-        error => { signal.removeEventListener('abort', abort); reject(error); });
-    });
-  }
-  async findReplacementVm(missing) {
-    const deadline = Date.now() + 15000;
-    for (const delay of this.reconnectDelays) {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) break;
-      await this.waitForVm(Math.min(delay, remaining));
-      if (Date.now() >= deadline) break;
-      let rows;
-      try {
-        const response = await this.request('/vms', {signal: AbortSignal.timeout(Math.max(1, deadline - Date.now()))}, false);
-        rows = await response.json();
-      } catch (error) {
-        this.scope.signal.throwIfAborted();
-        if (error.name === 'TimeoutError') break;
-        throw error;
-      }
-      this.scope.signal.throwIfAborted();
-      if (!Array.isArray(rows)) throw new Error('Unable to check the project Vault connection');
-      // A missing session or ticket route on a live VM must keep its original error.
-      const current = rows.find(row => row.id === missing);
-      if (current) {
-        if (current.workspace !== this.config.workspace) { this.vmUnverified = true; throw new Error('The saved Vault belongs to a different project. Reconnect using the intended project.'); }
-        this.vmUnverified = false; this.readiness.vmVerified=true; return false;
-      }
-      const matches = rows.filter(row => row.workspace === this.config.workspace && typeof row.id === 'string');
-      if (matches.length > 1) throw new Error('Several Vaults are running for this project. Use the launcher connection for the intended Vault.');
-      if (!matches.length) continue;
-      this.config.vm = matches[0].id; this.vmUnverified = false; this.readiness.vmVerified=true;
-      saveConnection(this.config, this.browser);
-      return true;
-    }
-    throw new Error('This project\'s Vault is stopped or unavailable. Resume it through the launcher, then reconnect this tab.');
-  }
-  async request(path, init = {}, recoverVm = true) {
-    if (['GET', 'HEAD'].includes((init.method || 'GET').toUpperCase())) return this.fetchRequest(path, init, recoverVm);
+  async request(path, init = {}) {
+    if (this.connectionError && path.startsWith('/vms/')) await this.verifyConnection();
+    if (['GET', 'HEAD'].includes((init.method || 'GET').toUpperCase())) return this.fetchRequest(path, init);
     this.invalidateReads();
-    try { return await this.fetchRequest(path, init, recoverVm); }
+    try { return await this.fetchRequest(path, init); }
     finally { this.invalidateReads(); }
   }
-  async fetchRequest(path, init = {}, recoverVm = true) {
-    const requestedVm = this.config.vm;
-    const target = /^\/vms\/([^/?]+)(?=\/|\?|$)/.exec(path);
-    if (recoverVm && this.vmUnverified && target && decodeURIComponent(target[1]) === requestedVm) {
-      const replaced = await this.waitForRecovery(requestedVm, init.signal || this.scope.signal);
-      if (replaced) {
-        const method = (init.method || 'GET').toUpperCase();
-        if (!['GET', 'HEAD'].includes(method)) throw new Error('The project Vault changed. Reconnect and submit this action again.');
-        return this.request(path.replace(target[0], '/vms/' + encodeURIComponent(this.config.vm)), init, false);
-      }
-    }
+  async fetchRequest(path, init = {}) {
     const headers = new Headers(init.headers); headers.set('Authorization', `Bearer ${this.config.token}`);
     const signal = init.signal ? AbortSignal.any([this.scope.signal, init.signal]) : this.scope.signal;
     signal.throwIfAborted();
     const response = await this.transport(this.config.base + path, {...init, headers, credentials: 'omit', cache: 'no-store', signal});
     signal.throwIfAborted();
-    if (response.status === 404 && recoverVm) {
-      const match = /^\/vms\/([^/?]+)(?=\/|\?|$)/.exec(path);
-      if (match && decodeURIComponent(match[1]) === requestedVm && await this.waitForRecovery(requestedVm, signal)) {
-        const method = (init.method || 'GET').toUpperCase();
-        const ticket = /^\/(?:shell\/ticket|sessions\/[^/]+\/attach)$/.test(path.slice(match[0].length).split('?')[0]);
-        if (!['GET', 'HEAD'].includes(method) && !ticket)
-          throw new Error('The project Vault changed. Reconnect and submit this action again.');
-        return this.request(path.replace(match[0], '/vms/' + encodeURIComponent(this.config.vm)), init, false);
-      }
-    }
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       const error = new Error(`${response.status} ${body.error || response.statusText}${body.fix ? ': ' + body.fix : ''}`);
@@ -218,7 +142,7 @@ export class NodeClient {
     try { return await this.json(this.w(route, body === undefined ? {path} : {}), body); }
     catch (error) {
       if (/^(?:404|405|501)\b/.test(error.message))
-        throw new Error(`${error.message}. If this Vault does not support node saves, update Vault and relaunch this project.`);
+        throw new Error(`${error.message}. Recursive saved states are unsupported by this server.`);
       throw error;
     }
   }
@@ -261,30 +185,6 @@ export class NodeClient {
     } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
   }
   agents() { return this.json(this.v('agents')); }
-  async sandboxAgents() {
-    const result = await this.json(this.v('run'), {argv:['sh','-lc','for name in codex claude opencode; do command -v "$name" >/dev/null 2>&1 && printf "%s\\n" "$name"; done; :'],timeout_s:5,actor:'agent-discovery'});
-    if(result.exit!==0)throw new Error('Sandbox agent discovery failed');
-    return [...new Set((result.stdout_tail||'').trim().split(/\s+/).filter(name=>['codex','claude','opencode'].includes(name)))];
-  }
-  async terminalAgentActive(terminal) {
-    const script = `import json,pathlib,sys
-marker=b'ALEMBIC_TERMINAL_ID='+sys.argv[1].encode()
-active=False
-for proc in pathlib.Path('/proc').iterdir():
- if not proc.name.isdigit(): continue
- try:
-  if marker not in (proc/'environ').read_bytes().split(b'\\0'): continue
-  fields=(proc/'stat').read_text().rsplit(')',1)[1].split()
-  if fields[4]=='0' or fields[2]!=fields[5] or int(fields[5])<=0: continue
-  args=(proc/'cmdline').read_bytes().split(b'\\0')[:2]
-  names={pathlib.PurePath(arg.decode(errors='replace')).name.removesuffix('.js') for arg in args}
-  names.add((proc/'comm').read_text().strip())
-  if names.intersection(('codex','claude','opencode')) or any(b'/@anthropic-ai/claude-code/' in arg for arg in args): active=True;break
- except (OSError,ValueError): pass
-print(json.dumps(active))`;
-    const result=await this.json(this.v('run'),{argv:['python3','-I','-c',script,terminal],timeout_s:3,actor:'terminal-session'});
-    return result.exit===0 && result.stdout_tail.trim()==='true';
-  }
   sessions() { return this.json(this.v('sessions')); }
   launch(agent, args = []) { return this.json(this.v('launch'), {agent, args}); }
   async attach(session) {

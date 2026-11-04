@@ -1,4 +1,5 @@
 <script lang="ts">
+  import {surfaceFor} from './contract/types.js';
   import SpatialSurface from './contract/SpatialSurface.svelte';
   import Shell from './Shell.svelte';
   import ChatPanel from './ChatPanel.svelte';
@@ -52,7 +53,8 @@
     if (!v.folder) throw new Error('Project is unavailable');
     const {document}=await openNodeDocument(v.folder,path,true);
     const selected=document.nodes.find((n:any)=>n.id===viewId);
-    if (!document.views.includes(viewId) || !selected || !/\.(glb|gltf)$/i.test(selected.path)) throw new Error('Child clip preview is unavailable');
+    if (!document.views.includes(viewId) || !selected || !surfaceFor(selected.path).model)
+      throw new Error('Child clip preview is unavailable');
     await v.open(path,true); await v.switchCanvasView(viewId);
     if (v.canvasPath!==path || v.canvasView!==viewId || !v.surface.model || v.animationClips[index]!==name) throw new Error('The child clip is no longer available');
     v.chooseAnimation(index);

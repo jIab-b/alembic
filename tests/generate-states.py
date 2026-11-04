@@ -1,12 +1,13 @@
 """Generate finite states from both public funnels; no second mock server."""
-import json, re
+import json, subprocess
 from pathlib import Path
 repo=Path(__file__).resolve().parents[1]
-render=re.findall(r'^\s{2,}(\w+)\(', (repo/'frontend/src/contract/render.ts').read_text(),re.M)
+render=json.loads(subprocess.check_output(['node', '--input-type=module', '-e',
+    "import {ports} from './frontend/src/contract/ports.js';console.log(JSON.stringify(ports))"],cwd=repo))
 for type in ('i3d','i2d','audio','iframe'):
     for mode in ('pending','success','slow','failed'):
         name=type+'-'+mode
-        replies={'render':{'methods':render,'mode':mode}}
+        replies={'render':{'methods':render.get(type,[]),'mode':mode}}
         if mode in ('pending','slow'): replies['services']={'delay':1000 if mode=='pending' else 2500,'body':{'services':[],'vms':['local']}}
         if mode=='failed': replies['services']={'status':503,'body':{'error':'Recorded peer failure'}}
         node='sample.'+type;fmt={'i3d':'babylon','i2d':'html2d','audio':'webaudio','iframe':'app'}[type]

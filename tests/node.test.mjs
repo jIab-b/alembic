@@ -84,7 +84,7 @@ test('headless connection readiness requires authenticated workspace, VM and roo
   const {mock,client}=setup(t);
   assert.deepEqual(client.readiness,{workspaceListed:false,vmVerified:false,rootTreeListed:false,error:''});
   await client.workspaces();assert.equal(client.readiness.workspaceListed,true);
-  await client.reconnectVm('v1');assert.equal(client.readiness.vmVerified,true);
+  await client.verifyConnection();assert.equal(client.readiness.vmVerified,true);
   await client.tree('');assert.equal(client.readiness.rootTreeListed,true);
   client.close();
   const unauthorized=new NodeClient(config,async(url,init)=>new Response(JSON.stringify({error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}}));
@@ -170,29 +170,6 @@ test('shell upgrades with a ticket only and closes with the client', async t => 
   assert.equal(mock.calls[0].method,'POST');assert.equal(socket.binaryType,'arraybuffer');client.close();assert.equal(closed,1);
 });
 
-test('a stale VM reconnects the same tab to the sole live VM for its workspace before opening a shell', async () => {
-  const calls=[],saved=new Map();let socketURL;
-  const socket=new EventTarget();socket.close=()=>{};
-  const browser={sessionStorage:{setItem:(key,value)=>saved.set(key,value)}};
-  const client=new NodeClient({...config,preview:'http://127.0.0.1:4401'},async(url,init)=>{
-    const path=new URL(url).pathname;calls.push({path,init});
-    assert.equal(init.headers.get('Authorization'),'Bearer test-token');assert.equal(init.credentials,'omit');
-    if(path==='/vms/v1/shell/ticket')return Response.json({error:'not_found'},{status:404});
-    if(path==='/vms')return Response.json([{id:'unrelated',workspace:'w2'},{id:'replacement',workspace:'w1'}]);
-    assert.equal(path,'/vms/replacement/shell/ticket');assert.equal(init.method,'POST');assert.equal(init.body,'{}');
-    return Response.json({ticket:'replacement-ticket'});
-  },url=>{socketURL=new URL(url);return socket;},browser);
-  assert.equal(await client.shell(),socket);
-  assert.deepEqual(calls.map(c=>c.path),['/vms/v1/shell/ticket','/vms','/vms/replacement/shell/ticket']);
-  assert.equal(client.config.vm,'replacement');assert.equal(config.vm,'v1');
-  assert.equal(socketURL.pathname,'/vms/replacement/shell/ws');assert.equal(socketURL.searchParams.get('ticket'),'replacement-ticket');
-  assert.ok(!socketURL.href.includes(config.token));
-  const persisted=connection(saved.get('alembic-connection'));
-  assert.equal(persisted.vm,'replacement');assert.equal(persisted.base,config.base);assert.equal(persisted.workspace,config.workspace);assert.equal(persisted.token,config.token);
-  assert.equal(persisted.preview,'http://127.0.0.1:4401');
-  client.close();
-});
-
 test('resource 404s on a live VM retain their error and are never retried', async () => {
   const calls=[];
   const client=new NodeClient(config,async url=>{
@@ -200,7 +177,7 @@ test('resource 404s on a live VM retain their error and are never retried', asyn
     return path==='/vms'?Response.json([{id:'v1',workspace:'w1'}]):Response.json({error:'session_ended'},{status:404});
   });
   await assert.rejects(client.attach('expired-session'),/404 session_ended/);
-  assert.deepEqual(calls,['/vms/v1/sessions/expired-session/attach','/vms']);
+  assert.deepEqual(calls,['/vms/v1/sessions/expired-session/attach']);
   assert.equal(client.config.vm,'v1');client.close();
 });
 
@@ -210,108 +187,6 @@ test('managed read errors expose retryable publication state separately from unc
   client.transport=async()=>Response.json({error:'publication_uncertain',retryable:false,fix:'inspect the managed run'}, {status:503});
   await assert.rejects(client.file('scene.svg'),error=>error.status===503&&error.code==='publication_uncertain'&&error.retryable===false&&/inspect the managed run/.test(error.message));
   client.close();
-});
-
-test('a stopped or ambiguous project Vault reports a useful error without starting anything', async () => {
-  for(const rows of [[],[{id:'other',workspace:'w2'}],[{id:'a',workspace:'w1'},{id:'b',workspace:'w1'}]]){
-    const calls=[];
-    const client=new NodeClient(config,async url=>{
-      const path=new URL(url).pathname;calls.push(path);
-      return path==='/vms'?Response.json(rows):Response.json({error:'not_found'},{status:404});
-    });
-    client.reconnectDelays=[0];
-    await assert.rejects(client.shell(),rows.length===2?/Several Vaults/:/Vault is stopped or unavailable/);
-    assert.deepEqual(calls,['/vms/v1/shell/ticket','/vms']);assert.equal(client.config.vm,'v1');client.close();
-  }
-});
-
-test('VM recovery retries once and does not mask unrelated routes or authentication failures', async () => {
-  const calls=[];
-  const client=new NodeClient(config,async url=>{
-    const path=new URL(url).pathname;calls.push(path);
-    return path==='/vms'?Response.json([{id:'new',workspace:'w1'}]):Response.json({error:'not_found'},{status:404});
-  });
-  await assert.rejects(client.sessions(),/404 not_found/);
-  assert.deepEqual(calls,['/vms/v1/sessions','/vms','/vms/new/sessions']);
-  calls.length=0;
-  await assert.rejects(client.request('/vms/someone-else/sessions'),/404 not_found/);
-  assert.deepEqual(calls,['/vms/someone-else/sessions']);
-  calls.length=0;
-  client.transport=async url=>{calls.push(new URL(url).pathname);return Response.json({error:'unauthorized'},{status:401});};
-  await assert.rejects(client.shell(),/401 unauthorized/);assert.deepEqual(calls,['/vms/new/shell/ticket']);client.close();
-});
-
-test('startup sessions and a terminal opened during a VM gap share bounded recovery polling', async () => {
-  const calls=[],waits=[];let polls=0,socketPath;
-  const socket=new EventTarget();socket.close=()=>{};
-  const client=new NodeClient(config,async url=>{
-    const path=new URL(url).pathname;calls.push(path);
-    if(path==='/vms')return Response.json(++polls<3?[{id:'other',workspace:'w2'}]:[{id:'replacement',workspace:'w1'}]);
-    if(path.startsWith('/vms/v1/'))return Response.json({error:'not_found'},{status:404});
-    if(path==='/vms/replacement/sessions')return Response.json([]);
-    assert.equal(path,'/vms/replacement/shell/ticket');return Response.json({ticket:'gap-ticket'});
-  },url=>{socketPath=new URL(url).pathname;return socket;});
-  client.reconnectDelays=[0,250,500];client.waitForVm=async delay=>{waits.push(delay);await Promise.resolve();};
-  const [sessions,shell]=await Promise.all([client.sessions(),client.shell()]);
-  assert.deepEqual(sessions,[]);assert.equal(shell,socket);assert.equal(polls,3);
-  assert.deepEqual(waits,[0,250,500]);assert.equal(calls.filter(p=>p==='/vms').length,3);
-  assert.equal(socketPath,'/vms/replacement/shell/ws');assert.equal(client.reconnecting,null);client.close();
-});
-
-test('closing a client promptly cancels shared reconnect backoff without another poll', async () => {
-  let enteredWait;const waiting=new Promise(resolve=>enteredWait=resolve);let polls=0;
-  const client=new NodeClient(config,async url=>new URL(url).pathname==='/vms'
-    ?(polls++,Response.json([])):Response.json({error:'not_found'},{status:404}));
-  client.reconnectDelays=[0,10000];
-  const originalWait=client.waitForVm.bind(client);
-  client.waitForVm=delay=>{if(delay)enteredWait();return originalWait(delay);};
-  const requests=[client.sessions(),client.shell()];
-  const rejected=requests.map(p=>assert.rejects(p,/abort/i));
-  await waiting;client.close();await Promise.all(rejected);
-  assert.equal(polls,1);assert.equal(client.reconnecting,null);
-});
-
-test('an individual AbortSignal cancels its request while a second caller keeps recovering', async () => {
-  let allowWait,enteredWait,polls=0;
-  const waiting=new Promise(resolve=>enteredWait=resolve);
-  const release=new Promise(resolve=>allowWait=resolve);
-  const client=new NodeClient(config,async url=>{
-    const path=new URL(url).pathname;
-    if(path==='/vms')return Response.json(++polls===1?[]:[{id:'new',workspace:'w1'}]);
-    return path==='/vms/new/sessions'?Response.json([]):Response.json({error:'not_found'},{status:404});
-  });
-  client.reconnectDelays=[0,250];
-  client.waitForVm=async delay=>{if(delay){enteredWait();await release;}};
-  const abort=new AbortController();
-  const cancelled=client.request('/vms/v1/events',{signal:abort.signal});
-  const failure=assert.rejects(cancelled,/abort/i);
-  const sessions=client.sessions();await waiting;abort.abort();await failure;
-  allowWait();assert.deepEqual(await sessions,[]);assert.equal(polls,2);client.close();
-});
-
-test('exhausted recovery stops at its bound and can recover on a later explicit retry', async () => {
-  let running=false,polls=0;
-  const client=new NodeClient(config,async url=>{
-    const path=new URL(url).pathname;
-    if(path==='/vms'){polls++;return Response.json(running?[{id:'later',workspace:'w1'}]:[]);}
-    if(path==='/vms/later/sessions')return Response.json([]);
-    return Response.json({error:'not_found'},{status:404});
-  });
-  client.reconnectDelays=[0,0,0];
-  await assert.rejects(client.sessions(),/Vault is stopped or unavailable/);
-  assert.equal(polls,3);assert.equal(client.reconnecting,null);assert.equal(client.config.vm,'v1');
-  running=true;assert.deepEqual(await client.sessions(),[]);assert.equal(polls,4);client.close();
-});
-
-test('an unsafe host-call POST is not replayed after a missing VM is replaced', async () => {
-  const calls=[];
-  const client=new NodeClient(config,async(url,init)=>{
-    const path=new URL(url).pathname;calls.push({path,method:init.method||'GET'});
-    return path==='/vms'?Response.json([{id:'new',workspace:'w1'}]):Response.json({error:'not_found'},{status:404});
-  });
-  await assert.rejects(client.call(['/tool','one-action']),/submit this action again/);
-  assert.deepEqual(calls,[{path:'/vms/v1/call',method:'POST'},{path:'/vms',method:'GET'}]);
-  assert.equal(client.config.vm,'new');client.close();
 });
 
 test('host call posts argv unchanged, uses a scoped ticket and reports unsupported routes', async t => {
@@ -328,7 +203,7 @@ test('host call posts argv unchanged, uses a scoped ticket and reports unsupport
   client.close();
 });
 
-test('agent discovery and session operations use the vault API', async t => {
+test('agent discovery and session operations use the backend API', async t => {
   assert.deepEqual(agentNames('claude,codex claude'), ['claude','codex']);
   assert.deepEqual(agentNames('["opencode","codex"]'), ['opencode','codex']);
   assert.deepEqual(agentNames(''), []);
@@ -341,7 +216,7 @@ test('agent discovery and session operations use the vault API', async t => {
   assert.ok(!mock.calls.some(c=>c.path.endsWith('/call')));
 });
 
-test('Vault discovery supplies available agents despite stale launcher hints', async t => {
+test('backend discovery supplies available agents despite stale launcher hints', async t => {
   const {mock,client}=setup(t);
   client.config = {...config,agents:['claude','codex','opencode','custom-agent']};
   assert.deepEqual(await detectAgents(client),['claude','codex','opencode']);
@@ -368,19 +243,7 @@ test('startup verifies saved VM ownership and never invokes a VM belonging to an
     throw new Error('must not access another workspace VM');
   },undefined,browser);
   client.reconnectDelays=[0];
-  await assert.rejects(client.reconnectVm('v1'),/different project/);
+  await assert.rejects(client.verifyConnection(),/different project/);
   await assert.rejects(client.sessions(),/different project/);
   assert.deepEqual(calls,['/vms','/vms']);assert.equal(client.config.vm,'v1');assert.equal(saved.size,0);client.close();
-});
-
-test('startup refresh persists only a sole exact-workspace replacement and preserves credentials', async () => {
-  const saved=new Map(),browser={sessionStorage:{setItem:(k,v)=>saved.set('s:'+k,v)},localStorage:{setItem:(k,v)=>saved.set('l:'+k,v)}};
-  const client=new NodeClient(config,async url=>{
-    assert.equal(new URL(url).pathname,'/vms');return Response.json([{id:'other',workspace:'w2'},{id:'new',workspace:'w1'}]);
-  },undefined,browser);client.reconnectDelays=[0];
-  assert.equal(await client.reconnectVm('v1'),true);
-  for(const key of ['s:alembic-connection','l:alembic-connection:w1']) {
-    const persisted=connection(saved.get(key));assert.equal(persisted.vm,'new');assert.equal(persisted.workspace,'w1');assert.equal(persisted.token,config.token);
-  }
-  client.close();
 });

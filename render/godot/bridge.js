@@ -113,7 +113,7 @@ export function requireGPU(canvas) {
     }, location.origin));
     return globalThis.alembicGodotGPU = { description, software: false };
 }
-// Keep each node-file request below Vault's 16 MiB transport boundary.
+// Keep each node-file request below the server's 16 MiB transport boundary.
 export function wasmParts(file, parts) {
     const original = globalThis.fetch.bind(globalThis);
     globalThis.fetch = async (input, options) => {

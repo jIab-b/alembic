@@ -14,7 +14,10 @@ sys.path.insert(0, str(repo / 'tests'))
 
 
 def main():
-    temporary = repo / '.tmp'
+    if not (repo / 'tests/mock/test_scene').is_dir():
+        print('SKIP: optional test_scene is absent')
+        return 0
+    temporary = Path(os.environ['TMPDIR'])
     temporary.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='composition-', dir=temporary) as directory:
         work = Path(directory)
@@ -33,13 +36,6 @@ def main():
                                 {'ALEMBIC_CHECK': runner.windows(repo / 'tests/composition-browser.mjs')})
             print(result.stdout)
             print(result.stderr, file=sys.stderr)
-            # Keep a review image with the authored project; all relay state is disposable.
-            preview = work / 'output/composition-overview.png'
-            if result.returncode == 0 and preview.exists():
-                shutil.copy2(preview, repo / 'tests/mock/test_scene/preview.png')
-            tower = work / 'output/tower-overview.png'
-            if result.returncode == 0 and tower.exists():
-                shutil.copy2(tower, repo / 'tests/mock/test_scene/tower-preview.png')
             return result.returncode
         finally:
             process.terminate()

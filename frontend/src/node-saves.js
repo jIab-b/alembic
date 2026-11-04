@@ -22,7 +22,8 @@ export function createNodeSaves(onchange) {
     update(current, {loading: true, historyError: ''});
     try {
       const history = await client.listNodeSaves(path);
-      if (!Array.isArray(history) || history.some(saved => !validSavedState(saved, path))) throw new Error('Vault returned an invalid saved-state history');
+      if (!Array.isArray(history) || history.some(saved => !validSavedState(saved,
+        path))) throw new Error('backend returned an invalid saved-state history');
       // State IDs are identities, not timestamps; do not imply an ordering the API lacks.
       const unique = [...new Map(history.map(saved => [saved.state, current.result?.state === saved.state ? {...saved, ...current.result} : saved])).values()];
       if (current.result && !unique.some(saved => saved.state === current.result.state)) unique.push(current.result);
@@ -37,7 +38,7 @@ export function createNodeSaves(onchange) {
     try {
       const result = await client.saveNode(path, expected);
       if (!validReceipt(result, path))
-        throw new Error('Vault returned an invalid node-save receipt; the save could not be verified');
+        throw new Error('backend returned an invalid node-save receipt; the save could not be verified');
       update(current, {result, history: [...current.history.filter(saved => saved.state !== result.state), result]});
       await refresh(client, path);
     } catch (error) { update(current, {error: error.message}); }
@@ -50,7 +51,7 @@ export function createNodeSaves(onchange) {
     try {
       const result = await client.restoreNode(state, destination);
       if (!result || result.state !== state || result.destination !== destination || !Number.isInteger(result.files) || result.files < 1)
-        throw new Error('Vault returned an invalid node-restore receipt; the restore could not be verified');
+        throw new Error('backend returned an invalid node-restore receipt; the restore could not be verified');
       update(current, {restoreResult: result});
     } catch (error) { update(current, {restoreError: error.message}); }
     finally { update(current, {restoring: '',}); }

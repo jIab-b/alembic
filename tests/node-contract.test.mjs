@@ -1,3 +1,4 @@
+import {backendFor} from '../render/registry.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readExports,readPlaybacks,resolveWebPath} from '../frontend/src/node-contract.js';
@@ -13,7 +14,10 @@ test('per-render interaction rows opt in explicitly and ignore retired screen gr
   for(const extra of ['interaction\tweb\tpointer_lock\ttrue\n','interaction\tweb\tio_lock\t1\n','interaction\tmissing\tio_lock\ttrue\n','interaction\tweb\tio_lock\tfalse\ninteraction\tweb\tio_lock\ttrue\n'])assert.throws(()=>parse(extra),/interaction permissions/);
   assert.throws(()=>parse('interaction\tweb\tscreen_lock\ttrue\n','game.i2d'),/Invalid render export/);
   assert.throws(()=>readExports(bytes('exports-index\t1\nrender\tsvg\tsvg\tpreview.svg\ninteraction\tsvg\tscreen_lock\ttrue\n'),'game.i3d'),/Invalid render export/);
-  const view=readView(bytes('view-index\t1\ndefault\truntime\nview\truntime\tgodot\tgame.stream\ninteraction\truntime\tio_lock\ttrue\n'),'game.i3d');
+  const view=
+    readView(
+      bytes('view-index\t1\ndefault\truntime\nview\truntime\tglb\tgame.glb\ninteraction\truntime\tio_lock\ttrue\n'),
+      'game.i3d');
   assert.deepEqual(view.nodes[0].interaction,{io_lock:true});
   const graph={format:'alembic.canvas',version:1,title:'Legacy',nodes:[{id:'web',path:'index.html',label:'Web',inputs:[],interaction:{screen_lock:true}}],views:['web'],defaultView:'web'};
   for (const threeD of [undefined, true, false])
@@ -105,6 +109,9 @@ import {types,extensions} from '../frontend/src/contract/types.js';
 import {validateRender,validateRenderEffect} from '../frontend/src/contract/rules.js';
 for(const [type,spec] of Object.entries(types)) for(const format of spec.formats) test(`${type} render ${format} and playback indexes 1/2`,()=>{
   const path='node.'+type,file='source.'+(extensions[format]?.[0]||format);
+  if (backendFor(format)?.unsupported) {
+    assert.throws(() => validateRender(path, format, file), /unsupported for now/); return;
+  }
   const doc=readExports(bytes(`exports-index\t1\nrender\tmain\t${format}\t${file}\n`),path);
   assert.deepEqual(doc.views,['main']);assert.equal(doc.defaultView,'main');assert.equal(doc.nodes[0].format,format);
   for(const version of [1,2]) for(const duration of ['1.25','unknown']) {
@@ -115,7 +122,8 @@ for(const [type,spec] of Object.entries(types)) for(const format of spec.formats
   for(const other of Object.keys(types).filter(k=>k!==type))assert.throws(()=>readExports(bytes(`exports-index\t1\nrender\tmain\t${format}\t${file}\n`),'node.'+other),/Invalid render export/);
 });
 test('format boundaries, child types, visible effects and malformed version 2 fail',()=>{
-  for(const format of ['godot','stream'])assert.throws(()=>validateRender('node.i3d',format,'view.stream',{child:true}),/child/);
+  for(const format of ['godot','stream'])assert.throws(()=>validateRender('node.i3d',format,'view.stream',{child:true}
+    ),/unsupported for now|Unknown render format/);
   for(const format of ['babylon','glb','gltf'])validateRender('node.i3d',format,'view.'+(extensions[format]?.[0]||format),{child:true});
   for(const effect of [{scene3D:true},{camera3D:true}])assert.throws(()=>validateRenderEffect('node.i2d',effect),/3D/);
   assert.throws(()=>validateRenderEffect('node.i3d',{visibleText:['HUD']}),/DOM text/);
@@ -131,4 +139,10 @@ test('iframe app URLs are declared resources; backend commands are no longer rec
  assert.equal(doc.nodes[0].url,url);assert.equal(doc.nodes[0].path,'page.iframe/__remote__/'+encodeURIComponent(url)+'/index.html');
  assert.throws(()=>readExports(bytes(head+url+'\nbackend\t5173\tstart\n'),'page.iframe'),/record/);
  for(const bad of ['http://user@localhost:5173','https://localhost:5173','http://localhost:5173/#secret'])assert.throws(()=>readExports(bytes(head+bad+'\n'),'page.iframe'));
+});
+
+test('render node key order preserves serialized prompt context bytes', () => {
+  const doc = readExports(bytes('exports-index\t1\nrender\tmain\tglb\tmodel.glb\n'), 'model.i3d');
+  assert.equal(JSON.stringify(doc.nodes[0]), JSON.stringify({id: 'main', path: 'model.i3d/model.glb',
+    label: 'GLB', inputs: [], format: 'glb', interaction: {io_lock: false}}));
 });

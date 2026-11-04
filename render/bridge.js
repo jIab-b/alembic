@@ -1,5 +1,6 @@
+import {assertPort, ports} from '../frontend/src/contract/ports.js';
 // This is the runtime implementation of the Render contract, shared by both engines.
-export function createRender(operations) {
+export function createRender(operations, port = 'i3d') {
     const listeners = new Map();
     const listen = name => listener => {
         if (!listeners.has(name))
@@ -7,12 +8,13 @@ export function createRender(operations) {
         listeners.get(name).add(listener);
         return () => listeners.get(name).delete(listener);
     };
-    /** @type {import('../frontend/src/contract/render').Render} */
     const surface = {
         ...operations,
         onReady: listen('ready'), onCamera: listen('camera'), onPlayback: listen('time'), onFailure: listen('failure')
     };
+    assertPort(port, surface);
     return Object.assign(surface, {
+        port, methods: ports[port],
         emit(name, value) {
             for (const listener of listeners.get(name) || [])
                 listener(value);
@@ -20,6 +22,8 @@ export function createRender(operations) {
     });
 }
 export function connectRender(surface, info) {
+    assertPort(surface.port, surface);
+    globalThis.__alRender = surface;
     const send = data => parent.postMessage(data, location.origin);
     let selected;
     try {
@@ -29,10 +33,10 @@ export function connectRender(surface, info) {
     }
     const off = [
         surface.onReady(data => send({
-            type: 'alembic.web.ready', ...info, ...data,
+            type: 'alembic.web.ready', ...info, ...data, methods: surface.methods,
             ...(selected ? { renders: [selected] } : {})
         })),
-        surface.onCamera(camera => send({
+        surface.onCamera?.(camera => send({
             type: 'alembic.web.camera', camera, at: performance.timeOrigin + performance.now()
         })),
         surface.onPlayback(time => send({ type: 'alembic.web.time', time })),
@@ -74,6 +78,6 @@ export function connectRender(surface, info) {
     addEventListener('message', receive);
     return () => {
         removeEventListener('message', receive);
-        off.forEach(dispose => dispose());
+        off.forEach(dispose => dispose?.());
     };
 }

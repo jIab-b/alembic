@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {container, pack} from '../frontend/src/gltf.js';
-import {editSolid, readSolids} from '../frontend/src/solids.js';
+import {container, pack} from '../render/babylon/document.js';
+import {editSolid, readSolids} from '../render/babylon/solids.js';
 
 const doc = () => ({asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],nodes:[{name:'Original',mesh:0}],
   meshes:[{primitives:[]}],buffers:[{byteLength:4}],bufferViews:[{buffer:0,byteOffset:0,byteLength:4}],

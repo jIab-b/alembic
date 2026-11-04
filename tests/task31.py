@@ -5,10 +5,12 @@ repo=Path(__file__).resolve().parents[1];sys.path.insert(0,str(repo/'backend'))
 from common import launch_url, location, rpc, start, connection
 runner=importlib.machinery.SourceFileLoader('windows_run',str(repo/'tests/windows-run.py')).load_module()
 case=sys.argv[1]
+fixtures=Path(os.environ.get('ALEMBIC_FIXTURE_ROOT', repo/'tests/mock'))
 os.environ['PATH']=str(repo/'tests/fixtures')+os.pathsep+os.environ['PATH']
 with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as directory:
-    root=Path(directory)/'project';shutil.copytree(repo/'tests/mock',root,ignore=lambda directory,names:
-        set(names)-{'audio','i2d','i3d','iframe','invalid','skills'} if Path(directory)==repo/'tests/mock' else {'.alembic'})
+    root=Path(directory)/'project';shutil.copytree(fixtures,root,ignore=lambda directory,names:
+        set(names)-{'audio','i2d','i3d','iframe','invalid','skills','demos',
+            'stub.i2d','broken.i2d','unsupported.i3d'} if Path(directory)==fixtures else {'.alembic'})
     shutil.copy2(repo/'tests/fixtures/codex',root/'codex')
     if case!='playback':
         for source in ['i3d/box.i3d','i3d/model.i3d','i2d/flat.i2d']:shutil.copytree(root/source,root/Path(source).name)
@@ -35,14 +37,18 @@ with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as directory:
                 time.sleep(2);rpc(root,'create',argv=['bash','-c','cd external && exec ./codex'],suppress=False,external=True)
             threading.Thread(target=attach,daemon=True).start()
         extra=dict(ALEMBIC_CLI=str(repo/'backend/al'),ALEMBIC_MOCK=runner.windows(root))
+        if os.environ.get('ALEMBIC_GROUP'): extra['ALEMBIC_GROUP']=os.environ['ALEMBIC_GROUP']
         if case=='completion' and os.environ.get('ALEMBIC_COMPLETION_NODE'):
             extra['ALEMBIC_COMPLETION_NODE']=os.environ['ALEMBIC_COMPLETION_NODE']
+        if case in ('ports','demos','directions'):
+            extra['ALEMBIC_CHECK']=runner.windows(repo/('tests/'+case+'-browser.mjs'))
         if case in ('task31','waiter','completion'):
             extra['ALEMBIC_CHECK']=runner.windows(repo/'tests/task31-browser.mjs')
         phases=['seed','resume'] if os.environ.get('ALEMBIC_RESTART_CHECK') else ['']
         for phase in phases:
             if phase:extra['ALEMBIC_RESTART_PHASE']=phase
-            result=runner.run(url,Path(os.environ['TMPDIR'])/('final-'+case+phase),case,extra)
+            out=Path(os.environ['TMPDIR'])/('final-'+case+phase+os.environ.get('ALEMBIC_GROUP',''))
+            result=runner.run(url,out,case,extra)
             print(result.stdout);print(result.stderr,file=sys.stderr)
             if result.returncode:sys.exit(result.returncode)
             if phase=='seed':

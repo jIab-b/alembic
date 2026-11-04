@@ -1,5 +1,6 @@
 <script lang="ts">
-  import {loadViewer} from './contract/render';
+  import {previewKind as classifyPreview} from '../../render/registry.js';
+  import {loadViewer} from './contract/surface.js';
   import {onMount, tick} from 'svelte';
   import type {NodeClient} from './node.js';
   import {fileChanges, runFiles, commandTitle} from './shadow.js';
@@ -58,18 +59,14 @@
       if (commit === 'live') liveHash = hash;
       size = bytes.length;
       const extension = path.split('.').pop()?.toLowerCase() || '';
-      previewKind = ['glb', 'gltf'].includes(extension) ? 'model'
-        : ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(extension) ? 'image'
-        : ['mp4', 'webm', 'mov'].includes(extension) ? 'video'
-        : ['wav', 'mp3', 'ogg', 'flac'].includes(extension) ? 'audio'
-        : ['json', 'txt', 'md', 'py', 'js', 'mjs', 'ts', 'gd', 'tscn', 'godot', 'svg', 'toml', 'cfg'].includes(extension) ? 'text' : 'binary';
+      previewKind = classifyPreview(path);
       if (previewKind === 'model') {
         await tick();
         viewerPromise ??= loadViewer().then(({createViewer}) => createViewer(host, () => {}, () => {}, undefined, undefined, {renderOnDemand: true}));
         const nextViewer = await viewerPromise;
         viewer = nextViewer;
         if (!alive || current !== previewId) return;
-        // Every external glTF resource comes from the same immutable snapshot.
+        // Every external model resource comes from the same immutable snapshot.
         await nextViewer.load(bytes, {read: (resource: string) => client.file(resource, commit)}, path, hasModel);
         if (!alive || current !== previewId) return;
         hasModel = true;

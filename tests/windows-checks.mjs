@@ -1,4 +1,4 @@
-// All Windows acceptance uses the one headless driver in tools/ui-check-windows.mjs.
+// All Windows acceptance uses the one headless driver in tests/ui-check-windows.mjs.
 import assert from 'node:assert/strict';
 import {readFile,writeFile,readdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
@@ -41,7 +41,7 @@ async function spatialCheck({page,result,step,shot}) {
  await step('flat2d',async()=>{const previous=await page.locator('.viewport iframe').getAttribute('src');await page.getByRole('button',{name:'flat.i2d',exact:true}).click();await page.waitForFunction(()=>window.__alembic.state().file==='flat.i2d/index.html');const flat=await renderFrame(page,previous);await flat.waitForFunction(()=>window.effects);assert.deepEqual(await page.locator('[aria-label="Selection tools"] button').evaluateAll(a=>a.map(e=>e.getAttribute('aria-label'))),['area']);await page.getByRole('button',{name:'io_lock',exact:true}).click();await page.keyboard.press('k');await flat.waitForFunction(()=>effects.keys>0);await page.keyboard.press('Escape');await page.getByRole('button',{name:'area',exact:true}).click();const b=await page.locator('.viewport').boundingBox();await drag(page,[b.x+100,b.y+100],[b.x+250,b.y+220],4);await page.locator('.areas .dot').first().waitFor();return {tools:1,input:true,handles:await page.locator('.areas .dot').count()}});
 }
 
-// Real Vault app route, including the declared Godot HTML export.
+// Real model route; unsupported adapters are covered by the port suite.
 async function enginesCheck({page,result,step,shot,file}) {
   page.setDefaultTimeout(6000);let frame,box;
   await step('modelGLB',async()=>{
@@ -51,30 +51,7 @@ async function enginesCheck({page,result,step,shot,file}) {
     await page.getByRole('button',{name:'pick',exact:true}).click();box=await page.locator('.viewport').boundingBox();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
     await page.waitForFunction(()=>window.__alembic.selection().selections.at(-1)?.objects?.length>0);return page.evaluate(()=>__alembic.selection().selections.at(-1).objects);
   });
-  await step('godot',async()=>{
-    await page.getByRole('button',{name:'game.i3d',exact:true}).click();await page.waitForFunction(()=>window.__alembic?.state().file==='game.i3d/game.html'&&window.__alembic.pose());
-    frame=page.frames().find(f=>f.url().includes('/app/'))||await page.waitForEvent('framenavigated',{predicate:f=>f.url().includes('/app/'),timeout:30000});await frame.waitForFunction(()=>window.godotFixture,null,{timeout:15000}).catch(async error=>{result.boot=await frame.evaluate(()=>({receive:typeof alembicGodotReceive,gpu:globalThis.alembicGodotGPU,resources:performance.getEntriesByType('resource').map(e=>({name:e.name.split('/').at(-1),size:e.decodedBodySize,duration:e.duration})),visibility:document.visibilityState}));throw error});await page.waitForTimeout(200);box=await page.locator('.viewport').boundingBox();return frame.evaluate(()=>alembicGodotGPU);
-  });
-  if(!frame||result.checks.godot?.failed)return;
-  const select=async shape=>{await page.getByRole('button',{name:shape,exact:true}).click();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);await page.waitForFunction(shape=>window.__alembic.selection().selections.at(-1)?.shape===shape,shape);return page.evaluate(()=>__alembic.selection().selections.at(-1))};
-  await step('sphere',async()=>{const s=await select('sphere');assert.ok(s.objects.length);assert.ok(s.crop);assert.equal((await file(s.crop)).subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(await page.locator('.handles .dot').count(),8);return {objects:s.objects.length,crop:!!s.crop,handles:8}});
-  await step('box',async()=>{const s=await select('box');assert.ok(s.objects.length);return {objects:s.objects.length,crop:!!s.crop}});
-  await step('pick',async()=>{const s=await select('pick');assert.ok(s.objects.some(o=>o.name==='box'));return s.objects});
-  await step('orbit',async()=>{const before=await page.evaluate(()=>__alembic.pose());await drag(page,[box.x+box.width*.8,box.y+box.height*.7],[box.x+box.width*.8-90,box.y+box.height*.7+30],8);await page.waitForTimeout(150);const after=await page.evaluate(()=>__alembic.pose());assert.notDeepEqual(before,after);await page.waitForTimeout(150);assert.deepEqual(await page.evaluate(()=>__alembic.pose()),after);return {moved:true,momentum:0}});
-  await step('IO',async()=>{const before=await frame.evaluate(()=>godotFixture.x);await page.getByRole('button',{name:'io_lock',exact:true}).click();await frame.waitForFunction(()=>godotFixture.io);await page.keyboard.press('k');await frame.waitForFunction(x=>godotFixture.x>x,before);assert.equal(await page.locator('.handles .dot').count(),0);await page.keyboard.press('Escape');await frame.waitForFunction(()=>!godotFixture.io);const x=await frame.evaluate(()=>godotFixture.x);await page.keyboard.press('k');await page.waitForTimeout(100);assert.equal(await frame.evaluate(()=>godotFixture.x),x);return {gameMoved:true,inspectBlocksGameplay:true}});
-  await step('pointerLock',async()=>{await page.getByRole('button',{name:'io_lock',exact:true}).click();await frame.waitForFunction(()=>godotFixture.io);box=await page.locator('.viewport').boundingBox();await page.mouse.click(box.x+100,box.y+100);try{await frame.waitForFunction(()=>!!document.pointerLockElement)}finally{await page.keyboard.press('Escape');await frame.waitForFunction(()=>!godotFixture.io&&!document.pointerLockElement)}return {captured:true,released:true}});
-  await step('depthCapture',async()=>{await page.evaluate(()=>__alembic.select({shape:'sphere',center:[0,0,0],radius:.1,tag:'inside'}));await page.waitForTimeout(500);const visible=await frame.evaluate(()=>document.querySelector('canvas').toDataURL());await frame.evaluate(()=>alembicGodotReceive(JSON.stringify({type:'alembic.web.draw',shapes:[],style:{color:'#e28a67',alpha:.18}})));await page.waitForTimeout(100);assert.equal(await frame.evaluate(()=>document.querySelector('canvas').toDataURL()),visible);return {occluded:true}});
-  await step('playbackMenu',async()=>{
-    await page.locator('summary[aria-label="Playback"]').click();
-    const item=page.getByRole('menuitem',{name:/^Move/});assert.match(await item.innerText(),/2s/);
-    await item.click();await frame.waitForFunction(()=>godotFixture.y===1);
-    await page.locator('summary[aria-label="Playback"]').click();
-    await page.getByRole('button',{name:'Reset to inspect',exact:true}).click();
-    await frame.waitForFunction(()=>godotFixture.y===0);return {moved:true,reset:true,actualMenu:true};
-  });
-  await step('prompt',async()=>{await page.getByRole('button',{name:'sphere',exact:true}).click();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);await page.mouse.click(box.x+box.width*.2,box.y+box.height*.7,{button:'right'});await page.getByRole('menuitem',{name:'Prompt',exact:true}).click();await page.locator('.node textarea').fill('Keep the box');await shot('godot-prompt');return {draft:await page.locator('.node textarea').inputValue(),send:'draft only; terminal delivery covered by the GLB checks'}});
-  await step('promptAnchor',async()=>{const anchor=()=>page.locator('.wire circle').evaluate(e=>[+e.getAttribute('cx'),+e.getAttribute('cy')]);const before=await anchor();await page.mouse.move(box.x+box.width*.8,box.y+box.height*.8);await page.keyboard.down('Shift');await page.mouse.down();await page.mouse.move(box.x+box.width*.8+60,box.y+box.height*.8+10,{steps:5});await page.mouse.up();await page.keyboard.up('Shift');await page.waitForTimeout(150);const after=await anchor(),expected=await page.evaluate(()=>__alembic.project(__alembic.selection().selections.find(s=>s.id===document.querySelector('.node').dataset.highlight).center));assert.ok(Math.hypot(...after.map((v,i)=>v-before[i]))>1);assert.ok(Math.hypot(...after.map((v,i)=>v-expected[i]))<.01);return {worldAttached:true}});
-  await step('noDOMOverlay',async()=>{const texts=await frame.evaluate(()=>[...document.body.children].filter(e=>!['CANVAS','SCRIPT','STYLE'].includes(e.tagName)&&e.textContent.trim()).map(e=>e.textContent));assert.deepEqual(texts,[]);return true});
+
 }
 
 // The directory and the node's own indexes are the entire fixture registry.
@@ -93,7 +70,8 @@ async function playbackCheck({page,step,result,file}) {
   const root=process.env.ALEMBIC_MOCK ? pathToFileURL(process.env.ALEMBIC_MOCK+'/') :
     new URL('./mock/',import.meta.url), nodes=[];
   // Authored examples have arbitrary lengths/static scripts: the skills case checks those.
-  for(const group of await readdir(root,{withFileTypes:true}))if(group.isDirectory()&&['i3d','i2d','audio','iframe','invalid'].includes(group.name))
+  for(const group of await readdir(root,{withFileTypes:true}))if(group.isDirectory()&&(process.env.ALEMBIC_GROUP ?
+    [process.env.ALEMBIC_GROUP] : ['i3d','i2d','audio','iframe','invalid']).includes(group.name))
     for(const node of await readdir(new URL(group.name+'/',root),{withFileTypes:true}))if(node.isDirectory())
       nodes.push({group:group.name,name:node.name,path:group.name+'/'+node.name});
   const menu=page.locator('details.playback-menu'), summary=page.locator('summary[aria-label="Playback"]');
@@ -128,9 +106,10 @@ async function playbackCheck({page,step,result,file}) {
     const previous=await source();
     await page.getByRole('button',{name:node.name,exact:true}).click();
     if(node.group==='invalid'){
-      await page.waitForFunction(()=>[...document.querySelectorAll('.status,[role=status]')].some(e=>/WebGL\/WebGPU context|visible DOM text|Live godot child|Stream renderer is unavailable|render format/i.test(e.textContent)));
+      await page.waitForFunction(()=>[...document.querySelectorAll('.status,[role=status]')].some(e=>
+        /WebGL\/WebGPU|visible DOM text|unsupported for now|render format|Invalid render/i.test(e.textContent)));
       // A forbidden dependency's rejected fetch is part of its visible failure.
-      result.errors=result.errors.filter(e=>!e.includes('Live godot child')&&!e.includes('/_deps/child/game.html'));
+      result.errors=result.errors.filter(e=>!e.includes('unsupported for now')&&!e.includes('/_deps/child/game.html'));
       return {failedVisibly:true};
     }
     let frame=await ready(node.path,previous);
@@ -223,10 +202,10 @@ async function playbackCheck({page,step,result,file}) {
 
 async function typesCheck({page,step}) {
   page.setDefaultTimeout(20000);
-  for(const node of ['box.i3d','game.i3d'])for(const pseudo of ['before','after'])await step(node+'::'+pseudo,async()=>{
+  for(const node of ['box.i3d'])for(const pseudo of ['before','after'])await step(node+'::'+pseudo,async()=>{
     await page.reload();await page.getByRole('button',{name:node,exact:true}).click();
     const frame=await renderFrame(page);
-    await frame.waitForFunction(()=>window.fixture||window.godotFixture,null,{timeout:20000});
+    await frame.waitForFunction(()=>window.fixture,null,{timeout:20000});
     await frame.evaluate(pseudo=>{
       const style=document.createElement('style');
       style.textContent=`body::${pseudo}{content:"Forbidden CSS HUD";position:fixed;top:20px;left:20px;color:white;z-index:2}`;
@@ -411,9 +390,9 @@ async function pointerCheck({page,step}) {
  });
 }
 
-export async function drag(page, from, to, steps) {
+export async function drag(page, from, to, steps, button = 'left') {
   await page.mouse.move(...from);
-  await page.mouse.down();
+  await page.mouse.down({button});
   await page.mouse.move(...to,{steps});
-  await page.mouse.up();
+  await page.mouse.up({button});
 }

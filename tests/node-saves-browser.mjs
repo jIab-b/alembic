@@ -4,14 +4,12 @@ import {createHash} from 'node:crypto';
 import {mkdir} from 'node:fs/promises';
 import {join} from 'node:path';
 import {mockHttp} from './mock-http.mjs';
-import {createRequire} from 'node:module';
+import {windowsBrowser} from './windows-browser.mjs';
 import {mockNode} from './mock-node.mjs';
 
-const require = createRequire(import.meta.url);
 const deferred = () => { let resolve; const promise = new Promise(done => resolve = done); return {promise, resolve}; };
 const includeAudioCoverage = process.env.ALEMBIC_INCLUDE_AUDIO_TESTS === '1';
-// This fixture tests browser behavior against mock HTTP responses. Vault's real
-// CAS and package snapshot semantics are covered by the backend integration suite.
+// Retained saved-state controls against mock HTTP; the thin backend returns 501 for these operations.
 async function fixture() {
   const node = mockNode(), calls = [], histories = new Map(), savedContents = new Map(), failures = new Map(), holds = new Map();
   for (const path of ['scene.i3d', 'drawing.i2d', ...(includeAudioCoverage ? ['score.audio'] : [])]) node.live.set(path + '/manifest.json', Buffer.from('{}'));
@@ -22,11 +20,11 @@ async function fixture() {
       response.writeHead(401).end();
       return true;
     }
-        if (path.endsWith('/node-save') || path.endsWith('/node-saves')) {
+        if (path.endsWith('/node-commit') || path.endsWith('/node-saves')) {
           const data = body.length ? JSON.parse(body) : null, selected = data?.path || url.searchParams.get('path');
           calls.push({path, method: request.method, selected, data});
           let result, status = 200;
-          if (path.endsWith('/node-save')) {
+          if (path.endsWith('/node-commit')) {
             const hold = holds.get(selected); if (hold) await hold.promise;
             const failure = failures.get(selected);
             if (failure) { result = failure.body; status = failure.status; }
@@ -63,11 +61,10 @@ async function fixture() {
 }
 
 test('headless node-save UI with mock HTTP: file/package actions, pending navigation, receipts, history and errors', {timeout: 60000}, async t => {
-  const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const server = await fixture(); let browser;
   try {
-    browser = await chromium.launch({headless: true, executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']});
-    const page = await browser.newPage({viewport: {width: 1300, height: 850}}), errors = [];
+    browser = await windowsBrowser({viewport: {width: 1300, height: 850}});
+    const page = await browser.context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(server.origin + '/#' + new URLSearchParams({node: server.origin, token: 'test-token', workspace: 'w1', vm: 'v1', agents: ''}));
     const files = page.getByRole('navigation', {name: 'Files', exact: true});
@@ -143,7 +140,8 @@ test('headless node-save UI with mock HTTP: file/package actions, pending naviga
       const content = await panel('scene.i3d').innerText();
       assert.match(content, /Worktree: main/);
       assert.match(content, /refs\/alembic\/nodes\//);
-      assert.equal(server.calls.filter(call => call.path.endsWith('/node-save') && call.selected === 'scene.i3d').length, 1);
+      assert.equal(server.calls.filter(call => call.path.endsWith('/node-commit') &&
+        call.selected === 'scene.i3d').length, 1);
       assert.equal(await page.locator('.viewport pre').textContent(), 'AFTER');
       await panel('scene.i3d').locator('.receipt summary').filter({hasText: /^Saved state 1/}).click();
       const destination = panel('scene.i3d').getByRole('textbox', {name: 'Restore destination for saved state 1'});
@@ -163,7 +161,8 @@ test('headless node-save UI with mock HTTP: file/package actions, pending naviga
       assert.equal(server.histories.get('scene.i3d').length, 1);
       server.failures.set('preview.png', {status: 404, body: {error: 'not_found'}});
       await rightClick('preview.png'); await saveItem.click();
-      await panel('preview.png').getByRole('alert').filter({hasText: /404 not_found.*update Vault/}).waitFor();
+      await panel('preview.png').getByRole('alert').filter({hasText:
+        /404 not_found.*Recursive saved states are unsupported/}).waitFor();
       assert.doesNotMatch(await panel('preview.png').getByRole('status').textContent(), /Saved ·/);
     });
     if (includeAudioCoverage) await t.test('audio node save reports declared dependency errors without claiming success', async () => {
@@ -175,5 +174,8 @@ test('headless node-save UI with mock HTTP: file/package actions, pending naviga
     });
     assert.equal(server.node.calls.some(call => /\/(?:restore|call|launch)$/.test(call.path)), false);
     assert.deepEqual(errors, []);
-  } finally { await browser?.close(); await server.close(); }
+  } finally {
+    for (const hold of server.holds.values()) hold.resolve();
+    await browser?.dispose(); await server.close();
+  }
 });

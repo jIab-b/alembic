@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {animationNames,pack} from '../frontend/src/gltf.js';
+import {animationNames,pack} from '../render/babylon/document.js';
 
 test('child clip discovery uses actual GLB animation metadata without inventing clips',()=>{
   const bytes=pack({asset:{version:'2.0'},animations:[{name:'reload'},{name:'bolt_cycle'},{}]},null);

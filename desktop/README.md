@@ -1,12 +1,7 @@
-# Desktop shell
+# Optional desktop shell
 
-The Electron shell shares the web frontend, supports full/minimal layouts and
-connects to pinned Vault with optional SSH forwarding of controller and preview
-origins. On WSL use `python3 desktop/run_windows.py --project /path/to/project`;
-never substitute a Linux GUI. The command attaches to an existing project VM.
-
-Build the shared frontend before packaging with desktop/package.cjs. Native
-rendering surface adapters are retired. Windows Vault bootstrap/discovery and its
-history-reading controller remain for old projects; do not remove them before
-migration. Headless shell checks suppress windows/dialogs, but cannot judge
-visible composition or input smoothness. See ../docs/frontend-contract.md.
+Install separately with `npm --prefix desktop install`; root installation excludes Electron.
+On WSL run `python3 desktop/run_windows.py --project PATH`. It starts the thin Python
+backend if needed and opens its URL in native Windows Electron. Never use Linux Electron on WSL.
+On Linux, start the backend and pass its private URL to `npm --prefix desktop start -- --connect URL`.
+The backend and terminal sessions remain running when the window closes; use `backend/al stop` to stop HTTP.

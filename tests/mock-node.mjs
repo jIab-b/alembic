@@ -31,8 +31,6 @@ export function mockNode() {
     if (path === '/vms') return json([{id:'v1',workspace:'w1'}]);
     if (path === '/workspaces') return json([{id:'w1',path:'/projects/test',name:'test'}]);
     if (path === '/vms/v1/agents') return json(['claude','codex','opencode']);
-    if (path === '/vms/v1/run' && data.actor === 'agent-discovery') return json({exit:0,stdout_tail:'codex\n',stderr_tail:''});
-    if (path === '/vms/v1/native-codex') return json(request.method === 'GET' ? {available:true,session:null} : {id:'native-1',call:'native-1',ticket:'test-ticket'});
     if (path === '/vms/v1/sessions') return json([...sessions.values()]);
     if (['/vms/v1/launch','/vms/v1/resume'].includes(path)) {
       const previous = [...sessions.values()].find(row => (row.id || row.pid) === data.session);

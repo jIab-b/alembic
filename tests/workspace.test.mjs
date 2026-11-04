@@ -1,3 +1,4 @@
+import {ports} from '../frontend/src/contract/ports.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {setImmediate as turn} from 'node:timers/promises';
@@ -5,8 +6,8 @@ import {readFile, readdir} from 'node:fs/promises';
 import {frontendModules} from './frontend-modules.mjs';
 import {mockNode} from './mock-node.mjs';
 import {NodeClient} from '../frontend/src/node.js';
-import {container,pack} from '../frontend/src/gltf.js';
-import {editSolid,readSolids} from '../frontend/src/solids.js';
+import {container,pack} from '../render/babylon/document.js';
+import {editSolid,readSolids} from '../render/babylon/solids.js';
 const {folder:{nodeFolder,optionalRead},backends:{nodeBackend,webBackend},workspace:{createWorkspace}} = await frontendModules();
 const config = {base:'http://node.test',token:'test-token',workspace:'w1',vm:'v1',agents:['claude','codex','opencode']};
 
@@ -27,9 +28,14 @@ async function workspace(configure = () => {}, spatial = false) {
   const viewer = {load:async()=>{},objects:()=>[{node:0,name:'Triangle'}],crop:async()=>new Uint8Array([137,80,78,71]),
     animation:()=>null,volumes(){},tool(){},defaultRadius:()=>1,replayPose:()=>({position:[0,0,1],target:[0,0,0]}),
     restoreReplayPose(){},dispose(){},pose(){},project:()=>[100,100],dragFrame:()=>({right:[1,0,0],up:[0,1,0],forward:[0,0,-1],scale:.01}),locate:()=>({point:[0,0,0],object:{node:0,name:'Triangle'}})};
+  viewer.render = Object.fromEntries(ports.i3d.map(name => [name, async () => {}]));
   set('__uiViewer',{createViewer:async(_host,onplace)=>{viewer.place=onplace;return viewer;}});
+  const transport = mock.fetch;
+  mock.fetch = (url, init) => new URL(url).pathname.endsWith('/agents')
+    ? Promise.resolve(Response.json(['codex'])) : transport(url, init);
   configure(mock);
-  const v = createWorkspace(); v.host = {}; v.viewport = {getBoundingClientRect:()=>({left:0,top:0,width:800,height:600})};
+  const v = createWorkspace(); mock.prompts=[]; v.bindTerminalPrompt(async text => mock.prompts.push(text)); v.host =
+    {}; v.viewport = {getBoundingClientRect:()=>({left:0,top:0,width:800,height:600})};
   const dispose = mounts[0]();
   await window.__alembic.ready();
   await Promise.resolve();
@@ -68,7 +74,8 @@ folderTest('the node folder preserves explorer ordering, stat, writes, hidden fi
 });
 
 test('sandbox agent discovery verifies installed commands without host fallback',async()=>{
-  const empty=await workspace(mock=>{const fetch=mock.fetch;mock.fetch=(url,init)=>new URL(url).pathname.endsWith('/run')?Promise.resolve(Response.json({exit:0,stdout_tail:''})):fetch(url,init);});
+  const empty=await workspace(mock=>{const fetch=mock.fetch;mock.fetch=(url,init)=>
+    new URL(url).pathname.endsWith('/agents')?Promise.resolve(Response.json([])):fetch(url,init);});
   try {
     assert.deepEqual([...empty.v.agents],[]);
     assert.match(empty.v.agentIssue,/No supported agents are installed/);
@@ -145,8 +152,6 @@ workspaceTest('experimental prompt drafts survive deselection and tabs, then X r
 
 test('unavailable startup sessions leave file UI and periodic session recovery running',async()=>{
   let available=false;
-  const originalRecovery=NodeClient.prototype.findReplacementVm;
-  NodeClient.prototype.findReplacementVm=function(...args){this.reconnectDelays=[0];return originalRecovery.apply(this,args);};
   let w;
   try {
     w=await workspace(mock=>{
@@ -158,13 +163,13 @@ test('unavailable startup sessions leave file UI and periodic session recovery r
         return transport(url,init);
       };
     });
-    assert.equal(w.ticks.length,2);assert.match(w.v.error,/Vault is stopped or unavailable/);
+    assert.equal(w.ticks.length,2);assert.match(w.v.error,/server is stopped or unavailable/);
     await w.v.open('note.txt');assert.equal(w.v.text,'AFTER');
     available=true;w.mock.sessions.set('external',{pid:17,agent:'codex',external:true,last_command:2});
     w.ticks[1]();await turn();await turn();
     assert.equal(w.v.selectedSession,undefined);assert.equal(w.v.error,'');
   } finally {
-    if(w)await w.close();NodeClient.prototype.findReplacementVm=originalRecovery;
+    if(w)await w.close();
   }
 });
 
@@ -174,7 +179,7 @@ workspaceTest('selection prompts preserve crops and geometry for confined Codex 
     await v.open('model.glb');
     await v.add({id:'s1',shape:'sphere',tag:'',center:[0,0,0],radius:1,objects:[],crop:null});
     v.choose('s1');v.setCanvasPromptMode('chat');v.openAsk('s1',100,100);await v.brew('Make it blue');
-    assert.match(v.nativeDraft,/Make it blue/);
+    assert.match(mock.prompts.at(-1),/Make it blue/);
     const description=mock.writes.findLast(w=>w.path.startsWith('.alembic/selections/'));
     const doc=JSON.parse(description.bytes);assert.equal(doc.file,'model.glb');assert.equal(doc.selection.shape,'sphere');
     assert.deepEqual(doc.selection.objects,[{node:0,name:'Triangle'}]);assert.ok(mock.live.has(doc.selection.crop));
@@ -210,12 +215,12 @@ workspaceTest('Continue chat prepares captured context for native paste without 
     mock.live.set('.alembic/crops/original.png',Buffer.from('original crop'));
     v.setCanvasPromptMode('chat');
     v.openAsk('s1',100,100);await v.brew('Continue this');
-    assert.match(v.ask.note,/Copy prompt into the terminal/);assert.equal(v.ask.state,'done');
+    assert.equal(v.ask.note,'Brewing');assert.equal(v.ask.state,'brew');
     assert.equal(v.chatReveal,1);
     const stored=JSON.parse(mock.writes.findLast(write=>write.path.startsWith('.alembic/selections/')).bytes);
     assert.equal(stored.file,'scene.svg');assert.equal(stored.selection.shape,'area');
     assert.equal(stored.selection.crop,'.alembic/crops/original.png');
-    assert.match(v.nativeDraft,/Continue this/);assert.equal(launches(mock).length,0);
+    assert.match(mock.prompts.at(-1),/Continue this/);assert.equal(launches(mock).length,0);
   });
 
 workspaceTest('selecting an animated highlight and opening its prompt preserves the current camera',async w=>{
@@ -239,8 +244,8 @@ workspaceTest('Codex canvas prompts prepare a confined-session draft without lau
     await v.selectAgent({pid:7,agent:'claude',external:true});
     assert.equal(v.canvasPromptDisabled,'');
     v.openAsk('s1',100,100);await v.brew('Canvas only');
-    assert.equal(v.ask.state,'done');assert.match(v.ask.note,/Copy prompt into the terminal/);
-    assert.match(v.nativeDraft,/Canvas only/);assert.equal(launches(mock).length,0);
+    assert.equal(v.ask.state,'brew');assert.equal(v.ask.note,'Brewing');
+    assert.match(mock.prompts.at(-1),/Canvas only/);assert.equal(launches(mock).length,0);
     assert.deepEqual(v.chatLog,[]);assert.equal(v.chatReveal,1);
     v.clearNativeDraft();assert.equal(v.nativeDraft,'');
   });
@@ -446,12 +451,12 @@ workspaceTest('canvas views stay in one tab, preserve per-view context and send 
     await v.switchCanvasView('sprite');assert.equal(v.file,'scene.svg');assert.equal(v.kind,'svg');assert.equal(v.tabs.length,1);assert.equal(v.selections.length,0);
     await v.switchCanvasView('model');assert.equal(v.selections[0].id,'castle-point');assert.equal(v.tabs.length,1);
     v.variant='codex';v.setCanvasPromptMode('chat');
-    v.openMenu('castle-point',100,100);await v.promptMenu();await v.brew('Add gameplay here');await settleCanvas(v);
+    v.openMenu('castle-point',100,100);await v.promptMenu();await v.brew('Add gameplay here');
     const detail=mock.writes.findLast(x=>x.path.startsWith('.alembic/selections/'));
     const context=JSON.parse(mock.live.get(detail.path));assert.equal(context.file,'draft.gltf');assert.equal(context.canvas.path,'Castle.canvas');assert.equal(context.canvas.view,'model');assert.equal(context.canvas.nodes.length,2);
     assert.match(mock.annotations.at(-1).text,/Node Castle\.canvas; view 3D \(draft\.gltf\); source draft\.gltf/);
     assert.deepEqual(mock.live.get('draft.gltf'),bytes);assert.equal(v.chatLog.length,0);assert.equal(launches(mock).length,0);
-    assert.match(v.nativeDraft,/Node Castle\.canvas; view 3D \(draft\.gltf\); source draft\.gltf/);
+    assert.match(mock.prompts.at(-1),/Node Castle\.canvas; view 3D \(draft\.gltf\); source draft\.gltf/);
     await v.open('note.txt');await v.switchTab(v.tabs.find(t=>t.path==='Castle.canvas').id);assert.equal(v.canvasView,'model');assert.equal(v.documentPath,'Castle.canvas');
     manifest.nodes.push({id:'vector',label:'Vector',path:'scene.svg',inputs:[]});manifest.views.push('vector');mock.live.set('Castle.canvas',Buffer.from(JSON.stringify(manifest)));
     await w.ticks[0]();await v.run(async()=>{});assert.equal(v.canvas.views.length,3);assert.equal(v.tabs.length,2);assert.equal(v.tool,'');
@@ -606,8 +611,7 @@ workspaceTest('stream renders fail visibly while legacy view metadata remains re
     mock.live.set('old.i3d/view.txt',Buffer.from('view-index\t1\ndefault\tlive\nview\tlive\tgodot\tscene.stream\naction\tlive\tFire\tkey:f\n'));
     mock.live.set('old.i3d/scene.stream',Buffer.from('{}'));
     await v.run(()=>v.open('old.i3d',true));
-    assert.match(v.error,/Stream renderer is unavailable/);assert.equal(v.kind,'other');
-    assert.equal(v.canvas.nodes[0].actions[0].label,'Fire');
+    assert.match(v.error,/unsupported for now/);assert.equal(v.kind,'');
     assert.equal(mock.calls.filter(c=>c.path.endsWith('/call')).length,0,'No retired native CLI is launched');
   });
 

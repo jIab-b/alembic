@@ -55,7 +55,7 @@ class Holder:
         if len(self.sessions) >= 32:
             raise ValueError('At most 32 live sessions per project')
         id = uuid.uuid4().hex
-        env = dict(os.environ, TERM='xterm-256color', ALEMBIC_SESSION=id)
+        env = dict(os.environ, TERM='xterm-256color', ALEMBIC_SESSION=id, ALEMBIC_ROOT=str(REPO))
         cache = project_dir(self.root, '.cache')
         env.update({key: str(cache / name) for key, name in dict(TMPDIR='tmp', TMP='tmp', TEMP='tmp',
             XDG_CACHE_HOME='cache', XDG_CONFIG_HOME='config', PYTHONUSERBASE='python', PIP_CACHE_DIR='pip',

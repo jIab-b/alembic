@@ -1,14 +1,43 @@
 {
-  "name": "alembic-ct",
+  "name": "alembic",
   "version": "0.1.2",
   "description": "Highlight SVGs, scenes and videos, then edit them with your own coding agent.",
   "type": "module",
   "scripts": {
-    "prepack": "npm --prefix frontend run build"
+    "start": "bash launch.sh",
+    "test": "node tests/run.mjs",
+    "prepack": "npm --workspace frontend run build"
   },
   "engines": {
     "node": ">=20"
   },
-  "license": "UNLICENSED",
-  "homepage": "https://alembic.clockworktower.com"
+  "license": "MIT",
+  "homepage": "https://alembic.clockworktower.com",
+  "workspaces": [
+    "frontend"
+  ],
+  "files": [
+    "backend/",
+    "frontend/src/",
+    "frontend/public/assets/",
+    "frontend/index.html",
+    "frontend/vite.config.js",
+    "frontend/package.json",
+    "frontend/dist/",
+    "render/",
+    "skills/",
+    "desktop/*.cjs",
+    "desktop/*.py",
+    "desktop/*.ps1",
+    "desktop/package.json",
+    "docs/",
+    "launch.sh",
+    "!**/.alembic/**",
+    "!**/__pycache__/**",
+    "!**/node_modules/**",
+    "!frontend/dist/examples/**",
+    "LICENSE"
+  ],
+  "private": true,
+  "repository": "github:jIab-b/alembic"
 }

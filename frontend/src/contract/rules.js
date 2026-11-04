@@ -1,4 +1,4 @@
-import { labels } from '../../../render/formats.js';
+import { labels, backendFor, requireBackend, labelViews } from '../../../render/registry.js';
 import { checkEffect } from './effect.js';
 import { types as nodeTypes, extensions } from './types.js';
 import { readCanvas, resolveNodePath, isTypedNode, interactionRows } from '../canvas.js';
@@ -33,12 +33,14 @@ export function nodeType(path) {
 }
 export function validateRender(path, format, file, { child = false } = {}) {
     const type = nodeType(path);
-    if (format === 'app' && type.formats.includes(format) && /^http:\/\//.test(file)) {
+    const backend = requireBackend(format);
+    if (backendFor(format)?.url && backend.port === path.split('.').at(-1).toLowerCase() && /^http:\/\//.test(file)) {
         const url = new URL(file);
         if (url.username || url.password || url.hash) throw new Error('Invalid app URL');
         return;
     }
-    if (!type.formats.includes(format) || typeof file !== 'string' || !(extensions[format] || [format]).includes(
+    if (backend.port !== path.split('.').at(-1).toLowerCase() || typeof file !== 'string' || !(extensions[format] ||
+      backend.extensions).includes(
       file.split('.').at(-1).toLowerCase()))
         throw new Error('Invalid render export');
     if (child && type.children && !type.children.includes(format))
@@ -62,7 +64,7 @@ export function readExports(bytes, path, options) {
             if (!id(name) || ids.has(name) || views.length === 16)
                 throw new Error('Invalid render export');
             validateRender(path, format, file, options);
-            const url = format === 'app' && file.startsWith('http://') ? file : null;
+            const url = backendFor(format)?.url && file.startsWith('http://') ? file : null;
             const resolved = url ? path + '/__remote__/' + encodeURIComponent(url) + '/index.html' : resolveNodePath(path, file);
             if (!resolved.startsWith(path + '/'))
                 throw new Error('Render export must stay inside its node');
@@ -89,10 +91,7 @@ export function readExports(bytes, path, options) {
     if (!views.length)
         throw new Error('Export scope has no render');
     interactionRows(nodes, interactions);
-    const glbs = nodes.filter(node => ['glb', 'gltf'].includes(node.format));
-    if (glbs.length > 1)
-        for (const node of glbs)
-            node.label = `GLB · ${node.path.split('/').at(-1).replace(/\.(glb|gltf)$/i, '')}`;
+    labelViews(nodes, views, true);
     const doc = readCanvas(new TextEncoder().encode(JSON.stringify({
         format: 'alembic.canvas', version: 1, title: path.split('/').pop(), nodes, views, defaultView: views[0]
     })), /\.i3d$/i.test(path));

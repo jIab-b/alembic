@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import {localRender} from '../render/local.js';
-import { container, framed, pack, within } from '../frontend/src/gltf.js';
+import {localRender} from '../render/babylon/local.js';
+import { container, framed, pack, within } from '../render/babylon/document.js';
 
 const examples = new URL('./mock/i3d/', import.meta.url);
 // Two boxes: node 1 at the origin, node 2 four units along x.

@@ -1,4 +1,4 @@
-import { hasScene } from '../../../render/formats.js';
+import { hasScene } from '../../../render/registry.js';
 // Validate effects in the isolated live frame. Install before authored scripts run.
 export function observeEffect(registeredScene = false) {
     const scene = window.game?.scene || window.scene;

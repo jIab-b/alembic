@@ -1,5 +1,5 @@
 import type {Moment} from './replay.svelte';
-/** What a selection points at: a glTF node, an event when a runtime draws the scene, an app's own id, or an
+/** What a selection points at: a model node, an event when a runtime draws the scene, an app's own id, or an
  * element of an embedded page (CSS selector) that an area covers. */
 export type Selected = {node?: number; event?: number; id?: string; selector?: string; name: string};
 /** sphere/box select what they touch; pick is one clicked object; area is a screen rectangle [x, y, w, h] in

@@ -23,7 +23,7 @@
       const quote=(value:string)=>"'"+value.replaceAll("'","'\\''")+"'";
       const label=project.replace(/[\x00-\x1f\x7f]/g,'');
       const banner=(agents.length?['Supported agents:',...agents]:['No supported agents installed.']).join('\\r\\n')+'\\r\\n\\r\\n';
-      // Only this shell's prompt changes; keep the Vault's command/audit hooks intact.
+      // Only this shell's prompt changes; keep the backend's command/audit hooks intact.
       shell.input?.(`export ALEMBIC_TERMINAL_ID=${quote(terminalId)}; ALEMBIC_PROJECT_NAME=${quote(label)}; PS1='\${PWD/#\\/workspace/$ALEMBIC_PROJECT_NAME} $ '; PS2='> '; printf ${quote('\\033[2J\\033[3J\\033[H'+banner)}\r`);
       if(active)term.focus();
     }catch(cause){if(current===epoch)message((cause as Error).message)}

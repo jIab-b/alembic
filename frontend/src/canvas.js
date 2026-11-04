@@ -1,5 +1,6 @@
+import {labelViews, renderablePath, backendFor, extensions, requireBackend} from '../../render/registry.js';
 // A scene index, not another asset container. Receipts describe actual exported bytes.
-import {readInteraction} from './native-stream.js';
+import {readInteraction} from './contract/interaction.js';
 const pathOK = path => typeof path === 'string' && path.length <= 500 && !/[\\\x00-\x1f]/.test(path) && path.split('/').every(part => part && !part.startsWith('.'));
 const digestOK = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 export function readCanvas(bytes, threeD) {
@@ -9,23 +10,14 @@ export function readCanvas(bytes, threeD) {
   if (bytes.length > 262144 || doc?.format !== 'alembic.canvas' || doc.version !== 1 || typeof doc.title !== 'string' || !doc.title || doc.title.length > 160 ||
       !Array.isArray(doc.nodes) || !doc.nodes.length || doc.nodes.length > 64 || !Array.isArray(doc.views) || !doc.views.length) fail();
   const ids = new Set();
+  labelViews(doc.nodes, doc.views);
   for (const n of doc.nodes) {
-    if (n && typeof n.path === 'string' && n.label === undefined && doc.views.includes(n.id)) {
-      const extension = n.path?.split('.').at(-1)?.toLowerCase(), app = n.application;
-      const same = doc.views.filter(id => doc.nodes.find(node => node.id === id)?.application === app && app === 'blender').length;
-      const glbs = doc.views.filter(id => /\.(glb|gltf)$/i.test(doc.nodes.find(node => node.id === id)?.path || '')).length;
-      n.label = extension === 'stream' ? app === 'blender' ? `Blender${same > 1 ? ` · ${n.path.split('/').at(-1).slice(0, -7)}` : ''}` : app === 'godot' ? 'Godot' : ''
-        : ['glb','gltf'].includes(extension) ? `GLB${glbs > 1 ? ` · ${n.path.split('/').at(-1).replace(/\.(glb|gltf)$/i,'')}` : ''}` : extension?.toUpperCase();
-    }
     if (!n || typeof n.id !== 'string' || !/^[\w-]{1,64}$/.test(n.id) || ids.has(n.id) || !pathOK(n.path) || /\.canvas$/i.test(n.path) ||
-        typeof n.label !== 'string' || !n.label || n.label.length > 160 || n.application !== undefined && (!/\.stream$/i.test(n.path) || !['blender','godot'].includes(n.application)) ||
-        n.actions !== undefined && (!Array.isArray(n.actions) || n.application !== 'godot' || n.actions.length > 8 ||
-          n.actions.some(a => !a || typeof a.label !== 'string' || !a.label || a.label.length > 32 || !['f','r','e','Tab','Return','Shift_L','Control_L'].includes(a.key)) ||
-          new Set(n.actions.map(a => a.key)).size !== n.actions.length) ||
+        typeof n.label !== 'string' || !n.label || n.label.length > 160 ||
         !Array.isArray(n.inputs) || n.inputs.length > 32 || new Set(n.inputs).size !== n.inputs.length ||
         ['capabilities', 'limitations'].some(key => n[key] !== undefined && (!Array.isArray(n[key]) || n[key].length > 12 || n[key].some(s => typeof s !== 'string' || s.length > 300)))) fail();
     ids.add(n.id);
-    if(doc.views.includes(n.id)||n.interaction!==undefined)n.interaction=readInteraction(n.interaction,{threeD:threeD!==false&&(/\.(glb|gltf|stream)$/i.test(n.path)||threeD===true&&/\.html$/i.test(n.path))});
+    if(doc.views.includes(n.id)||n.interaction!==undefined)n.interaction=readInteraction(n.interaction);
     if (n.receipt && (!digestOK(n.receipt.output) || !n.receipt.inputs || typeof n.receipt.inputs !== 'object' || Array.isArray(n.receipt.inputs) ||
         Object.entries(n.receipt.inputs).some(([id, hash]) => !n.inputs.includes(id) || !digestOK(hash)) ||
         (n.receipt.resources !== undefined && (!n.receipt.resources || typeof n.receipt.resources !== 'object' || Array.isArray(n.receipt.resources))) ||
@@ -41,7 +33,7 @@ export function readCanvas(bytes, threeD) {
     visiting.delete(id); layers.set(id, layer); return layer;
   }
   doc.nodes.forEach(n => depth(n.id));
-  if (doc.views.some(id => !/\.(?:stream|godot|glb|gltf|html|js|svg|png|jpe?g|webp|gif|avif|json|wav|mp3|ogg|flac|m4a|aac|opus|mp4|webm)$/i.test(byId.get(id).path))) fail();
+  if (doc.views.some(id => !renderablePath(byId.get(id).path))) fail();
   return doc;
 }
 export function canvasLayout(doc) {
@@ -57,7 +49,6 @@ export async function canvasStatus(doc, hashFile) {
       const [output, inputs] = await Promise.all([hash(n.path), Promise.all(n.inputs.map(id => inspect(doc.nodes.find(n => n.id === id))))]);
       if (!output) return {state: 'missing', reason: 'File unavailable', hash: null};
       if (n.build?.state === 'building' || n.build?.state === 'failed') return {state: n.build.state, reason: n.build.message || 'Showing the last available export', hash: output};
-      if (/\.stream$/i.test(n.path)) return {state: 'native', reason: 'Native 3D view of the saved source', hash: output};
       if (!n.inputs.length && !n.receipt) return {state: 'source', reason: 'Editable source', hash: output};
       if (!n.receipt) return {state: 'unverified', reason: 'No export receipt', hash: output};
       const resources = await Promise.all(Object.entries(n.receipt.resources || {}).map(async ([path, value]) => await hash(path) === value));
@@ -129,7 +120,8 @@ export function readNode(bytes, path, directory = true) {
   const resolve = value => resolveNodePath(base, value);
   const topLevelGraph = !spec.scene && Array.isArray(spec.nodes);
   if (!spec.scene && !topLevelGraph) return {format: 'alembic.canvas', version: 1, title: spec.title || path.split('/').pop(),
-    nodes: [{id: 'entry', path: resolve(spec.entry), label: spec.title || path.split('/').pop(), inputs: [],interaction:readInteraction(spec.interaction,{threeD:/\.i3d$/i.test(path)&&/\.(glb|gltf|stream|html)$/i.test(spec.entry)})}], views: ['entry'], defaultView: 'entry'};
+    nodes: [{id: 'entry', path: resolve(spec.entry), label: spec.title || path.split('/').pop(), inputs: [],
+      interaction:readInteraction(spec.interaction)}], views: ['entry'], defaultView: 'entry'};
   const doc = topLevelGraph
     ? {...structuredClone(spec), format: 'alembic.canvas'} : structuredClone(spec.scene);
   if (!Array.isArray(doc.nodes)) throw new Error('Invalid node scene');
@@ -155,20 +147,15 @@ export function readView(bytes, path) {
     if (kind === 'default' && parts.length === 1 && !defaultView) defaultView = parts[0];
     else if (kind === 'view' && parts.length === 3) {
       const [id, type, file] = parts;
-      if (!['glb','gltf','blender','godot'].includes(type) ||
-          !(type === 'blender' || type === 'godot' ? /\.stream$/i : new RegExp(`\\.${type}$`, 'i')).test(file)) throw new Error('Invalid view index target');
-      nodes.push({id, path: resolveNodePath(path, file), inputs: [], ...(type === 'blender' || type === 'godot' ? {application: type} : {}), ...(type === 'godot' ? {actions: []} : {})});
+      const backend = requireBackend(type);
+      if (!extensions[type]?.includes(file.split('.').at(-1))) throw Error('Invalid view index target');
+      nodes.push({id, path: resolveNodePath(path, file), inputs: [], format: type});
       views.push(id);
     } else if (kind === 'action' && parts.length === 3) actions.push(parts);
     else if (kind === 'interaction' && parts.length === 3) interactions.push(parts);
     else throw new Error('Invalid view index record');
   }
-  for (const [id, label, binding] of actions) {
-    const node = nodes.find(n => n.id === id);
-    if (!node || node.application !== 'godot') throw new Error('Action requires a Godot view');
-    if (!binding.startsWith('key:')) throw new Error('Unsupported action binding');
-    node.actions.push({label, key: binding.slice(4)});
-  }
+  if (actions.length) throw Error('Native action bindings are unsupported');
   interactionRows(nodes,interactions);
   return readCanvas(new TextEncoder().encode(JSON.stringify({format:'alembic.canvas',version:1,title:path.split('/').pop(),nodes,views,defaultView})),/\.i3d$/i.test(path));
 }

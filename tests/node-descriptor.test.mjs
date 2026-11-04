@@ -31,15 +31,9 @@ function folder(files) {
 test('malformed hidden descriptor fails rather than falling back to legacy data',async()=>{
   await assert.rejects(openNodeDocument(folder({'scene.i3d/.node.txt':bytes({invalid:true})}),'scene.i3d'));
 });
-test('view.txt owns render and action declarations, while node descriptor retains the save boundary',async()=>{
-  const index = viewText('# Exported views\nview-index\t1\ndefault\tasset\nview\tasset\tglb\tmesh.glb\nview\truntime\tgodot\truntime.stream\naction\truntime\tFire\tkey:f\n');
-  const f=folder({'scene.i3d/.node.txt':bytes(descriptor),'scene.i3d/view.txt':index});
-  const result=await openNodeDocument(f,'scene.i3d',true);
-  assert.equal(result.source,'scene.i3d/view.txt');assert.equal(result.document.defaultView,'asset');
-  assert.deepEqual(result.document.nodes[1].actions,[{label:'Fire',key:'f'}]);
-  assert.equal(result.document.nodes[1].path,'scene.i3d/runtime.stream');
-  assert.deepEqual(f.reads,['scene.i3d/.node.txt','scene.i3d/view.txt']);
-  assert.equal(readView(index,'recovered/scene.i3d').nodes[0].path,'recovered/scene.i3d/mesh.glb');
+test('retired native view declarations fail visibly', () => {
+  const index = viewText('view-index\t1\ndefault\truntime\nview\truntime\tgodot\truntime.html\n');
+  assert.throws(() => readView(index, 'scene.i3d'), /unsupported for now/);
 });
 test('view.txt rejects missing context and invalid records rather than exposing an unbound action',()=>{
   for (const text of [
@@ -86,11 +80,13 @@ test('a package without any descriptor reports it without probing reads',async()
   assert.deepEqual(empty.reads,[]);
 });
 test('standalone typed composition keeps its graph and views',async()=>{
-  const doc={format:'alembic.composition',version:1,title:'Sniper',primaryView:'3d',defaultView:'native',views:['native'],nodes:[{id:'native',path:'Sniper.stream',label:'Play',inputs:[]}]};
+  const doc={format:'alembic.composition',version:1,title:'Sniper',primaryView:'3d',defaultView:'native',views:
+    ['native'],nodes:[{id:'native',path:'Sniper.html',label:'Play',inputs:[]}]};
   const source=bytes(doc), f=folder({'Sniper.i3d':source});
   const result=await openNodeDocument(f,'Sniper.i3d');
   assert.equal(result.document.format,'alembic.canvas');assert.equal(result.document.primaryView,'3d');
-  assert.equal(result.document.nodes[0].path,'Sniper.stream');assert.equal(JSON.parse(new TextDecoder().decode(source)).format,'alembic.composition');
+  assert.equal(result.document.nodes[0].path,'Sniper.html');
+    assert.equal(JSON.parse(new TextDecoder().decode(source)).format,'alembic.composition');
   assert.equal(result.directory,false);assert.deepEqual(f.listed,['']);assert.deepEqual(f.reads,['Sniper.i3d']);
   const known=folder({'Sniper.i3d':bytes(doc)});
   const direct=await openNodeDocument(known,'Sniper.i3d',false);  // a known file entry reads without any listing
@@ -98,14 +94,15 @@ test('standalone typed composition keeps its graph and views',async()=>{
 });
 
 test('top-level package graph resolves node paths and preserves project-relative receipt resources',async()=>{
-  const hash='a'.repeat(64), doc={format:'alembic.node',version:1,title:'Main',entry:'preview.stream',dependencies:{},defaultView:'review',views:['native','review'],nodes:[
+  const hash='a'.repeat(64), doc={format:'alembic.node',version:1,title:'Main',entry:'preview.html',dependencies:{},
+    defaultView:'review',views:['native','review'],nodes:[
     {id:'source',path:'main.gd',label:'Source',inputs:[]},
-    {id:'native',path:'preview.stream',label:'Play',inputs:['source']},
+    {id:'native',path:'preview.html',label:'Play',inputs:['source']},
     {id:'review',path:'../../test_vids/review.mp4',label:'Review',inputs:['source'],receipt:{output:hash,inputs:{source:hash},resources:{'main/effects.i3d/effects.gd':hash}}}
   ]};
   const result=await openNodeDocument(folder({'scene.i3d/.node.txt':bytes(doc)}),'scene.i3d').catch(e=>e);
   assert.match(result.message,/escapes project/);
   const graph=(await openNodeDocument(folder({'main/main.i3d/.node.txt':bytes(doc)}),'main/main.i3d')).document;
-  assert.deepEqual(graph.views,['native','review']);assert.equal(graph.nodes[1].path,'main/main.i3d/preview.stream');
+  assert.deepEqual(graph.views,['native','review']);assert.equal(graph.nodes[1].path,'main/main.i3d/preview.html');
   assert.equal(graph.nodes[2].path,'test_vids/review.mp4');assert.deepEqual(graph.nodes[2].receipt.resources,{'main/effects.i3d/effects.gd':hash});
 });

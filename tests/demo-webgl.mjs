@@ -1,7 +1,7 @@
 // The same data-driven frontend checks on headless WSL hardware WebGL2.
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
-import {launchGpuBrowser,assertHardware} from '../tools/gpu-browser.mjs';
+import {launchGpuBrowser,assertHardware} from './gpu-browser.mjs';
 import {check} from './windows-checks.mjs';
 const out=resolve(process.env.ALEMBIC_OUT),result={checks:{},errors:[]};
 await mkdir(out,{recursive:true});

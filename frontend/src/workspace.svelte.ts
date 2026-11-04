@@ -1,5 +1,7 @@
+import {modelEditError} from '../../render/registry.js';
+import {assertRemotePort, assertPort} from './contract/ports.js';
 import {promptJobs} from './contract/prompt-jobs.js';
-import {webSurface,loadViewer,mediaEntry,checkedHTML,surfaceFor,shapeStyle} from './contract/render';
+import {webSurface,loadViewer,mediaEntry,checkedHTML,surfaceFor,shapeStyle} from './contract/surface.js';
 import {onMount} from 'svelte';
 import {NodeClient, tabConnection} from './node.js';
 import {preparePreview, runtimeExecutor, discoverPreview} from './preview.js';
@@ -7,8 +9,8 @@ import {readPreviewFile} from './preview-file.js';
 import {renderNotice} from './render.js';
 import {readCanvas, readNode, readView, isTypedNode, openNodeDocument, resolveNodePath} from './canvas.js';
 import {readPlaybacks, resolveWebPath, readExports} from './node-contract.js';
-import {container, keys} from './gltf.js';
-import {editSolid, isSolid, readSolids, solidLabel} from './solids.js';
+import {container, keys} from '../../render/model.js';
+import {editSolid, isSolid, readSolids, solidLabel} from '../../render/model.js';
 import {nodeFolder, optionalRead, projectName, type Folder} from './folder';
 import {sessionKey, mergeSession, commandSession} from './agents.js';
 import {decode, encode, sha256, type Selected, type Selection} from './history';
@@ -19,7 +21,7 @@ import type {CanvasTab} from './CanvasTabs.svelte';
 export function createWorkspace() {
   const minimal = new URLSearchParams(location.search).get('layout') === 'minimal';
   type Viewer = Awaited<ReturnType<Awaited<ReturnType<typeof loadViewer>>['createViewer']>>;
-  // A runtime is a vendored bundle (tools/import-runtime.mjs) that opens files whose JSON "format" it declares;
+  // A runtime is a vendored bundle (render/import-runtime.mjs) that opens files whose JSON "format" it declares;
   // with an adapter (runtimes/<name>.adapter.js) Alembic draws its scenes itself, otherwise it embeds the app.
   type Runtime = {name: string; formats: string[]; open: string; adapter?: string};
   type Session = {views: string[]; cycles: number; scene(view: string, cycle?: number, selected?: number | null): Uint8Array;
@@ -235,8 +237,8 @@ export function createWorkspace() {
     : agents.includes(variant) ? '' : agentIssue || 'No supported agents are installed');
   async function availableAgents(node: NodeClient) {
     try {
-      agents = await node.sandboxAgents();
-      agentIssue = agents.length ? '' : 'No supported agents are installed in this Vault.';
+      agents = await node.agents();
+      agentIssue = agents.length ? '' : 'No supported agents are installed in this backend.';
     } catch (cause) {
       agents = [];
       agentIssue = `Sandbox agent discovery failed: ${(cause as Error).message}`;
@@ -262,7 +264,7 @@ export function createWorkspace() {
   // Prompt overlays belong to the current interaction; saved annotations stay out of the way.
   const finishedHighlights = $derived([...parkedAsks, ...(ask ? [ask] : [])].filter(node => node.state === 'done' && node.hidden).map(node => node.id));
   const visible = $derived(selections.filter(s => !finishedHighlights.includes(s.id) && (s.id === active || spatialPrompts && spatialIds.includes(s.id))));
-  const realSupported = $derived(!minimal && Boolean(folder?.writable) && (!!webViewer || surface.model && !session && /\.(glb|gltf)$/i.test(file)));
+  const realSupported = $derived(!minimal && Boolean(folder?.writable) && (!!webViewer || surface.model && !session));
   const label = (o: Selected) => o.event !== undefined ? `event ${o.event}${o.name ? ` ${o.name}` : ''}`
     : o.node !== undefined ? `${o.name || 'unnamed'} (node ${o.node})` : o.selector ? `${o.name} at ${o.selector}` : o.name || String(o.id);
   function run(task: () => Promise<void>) {
@@ -279,7 +281,7 @@ export function createWorkspace() {
   }
   async function ensureViewer() {
     if (viewer) return;
-    const {createViewer} = await loadViewer();
+    const {createViewer} = await loadViewer(surface.format);
     const created = await createViewer(host, (center: number[], radius: number, hit: Selected | null) => {
       const shape = tool;
       if (!shape || shape === 'area') return;
@@ -290,6 +292,7 @@ export function createWorkspace() {
       if (spatialPrompts || ask?.state !== 'brew') void run(dismiss);
     }, {renderOnDemand: true});
     if (disposed) { created.dispose(); throw new Error('Closed'); }
+    assertPort('i3d', created.render);
     viewer = created;
   }
   async function view(bytes: Uint8Array, keep = false, resumed: Session | null = null, hydrate = !minimal) {
@@ -308,8 +311,6 @@ export function createWorkspace() {
     // Light iframe handshake: the host owns IO; page display needs no runtime binding.
     if (surface.lightIframe) updateInteraction({io_lock:false,configured:true,
       permissions:interactionPermissions(),capabilities:{io_lock:true}});
-    if (ext === 'godot')throw new Error('Godot source requires its declared HTML web export');
-    if (ext === 'stream') throw new Error('Stream renderer is unavailable; a render-funnel adapter is required');
     let format = '';
     if (ext === 'json') try { format = JSON.parse(decode(bytes)).format; } catch (e) { error = `${file} is not valid JSON: ${(e as Error).message}`; }
     const runtime = runtimes.find(r => r.formats.includes(format));
@@ -361,7 +362,7 @@ export function createWorkspace() {
           selections = [...selections, {id: nextId(), tag: '', mode: 'real', solidId: solid.solidId,
             ...geometry(solid), crop: null}];
         }
-      } catch { /* A loader/adapter can supply a fixture without a native glTF document. */ }
+      } catch { /* A loader/adapter can supply a fixture without a editable model document. */ }
       const animation = viewer.animation();
       if (animation) replay.attach({...animation, capture: area => viewer.crop({shape: 'area', area: area ?? [0, 0, 1, 1]})});
       viewer?.volumes(volumes(visible));
@@ -713,7 +714,7 @@ export function createWorkspace() {
   // before changing the annotation's mode so a failed save keeps the original prompt shape intact.
   async function writeSolid(selection: Selection, remove = false) {
     if(webViewer)throw new Error('This render has no source-editing binding for Solid shapes');
-    if (!realSupported) throw new Error('Real solids require a writable GLB or glTF file');
+    if (!realSupported) throw new Error(modelEditError);
     const latest = new Uint8Array(await folder!.read(file));
     if (await sha256(latest) !== liveSha) throw new Error('The model changed. Wait for it to reload before editing a solid.');
     const bytes = editSolid(latest, file, selection.solidId!, remove ? null : selection);
@@ -1071,9 +1072,9 @@ export function createWorkspace() {
       await useFolder(nodeFolder(client, projectName(project, projects)));
       if (!minimal) jobs = await promptJobs(folder!, client, completePrompt, run, cause => error = cause.message);
       const node = client;
-      // Refresh a saved VM identity even when the initial layout makes no VM requests.
-      node.vmUnverified = true; let vmVerified = true;
-      try { await node.reconnectVm(node.config.vm); }
+      // Check project ownership before opening a terminal.
+      let vmVerified = true;
+      try { await node.verifyConnection(); }
       catch (cause) { vmVerified = false; if (!disposed) sessionFailed(cause); }
       if (!minimal) {
         try { if (vmVerified) { lastAgentDiscovery = Date.now(); await availableAgents(node); } }
@@ -1081,8 +1082,8 @@ export function createWorkspace() {
         const cursor = String(Date.now() * 1000);
         try { ({variant, conversation, chatLog, dropped} = {variant, conversation, chatLog, dropped, ...JSON.parse(localStorage.getItem(chatKey()) || '{}')}); } catch {}
         if (!agents.includes(variant)) variant = node.config.agents?.find(name => agents.includes(name)) || agents[0] || '';
-        // A temporarily stopped VM must not prevent the file UI and periodic reconnect checks starting.
-        if (vmVerified) try { await relist(node); } catch { /* The session poll below retries after bounded recovery expires. */ }
+        // An unavailable server must not prevent the file UI and periodic reconnect checks starting.
+        if (vmVerified) try { await relist(node); } catch { /* The session poll below retries after a failure. */ }
         void watchAgents(node, cursor);
       }
       const declared = await fetch(asset('assets/runtimes/manifest.json'));
@@ -1119,6 +1120,8 @@ export function createWorkspace() {
               webReady={renders:data.renders,scenarios:data.scenarios,exports:[],controls:[],seek:list(data.seek)?data.seek:[]};
             return;
           }
+          try { assertRemotePort(surface.port, data.methods); }
+          catch (cause) { error=webError=(cause as Error).message; return; }
           if(/\.i3d$/i.test(canvasPath)) {
             if(!data.renderer?.camera || data.renderer.gpu?.software!==false){error=webError='Renderable has no hardware spatial renderer binding';return}
             webViewer ||= webSurface(webCall,body=>frameEl?.contentWindow?.postMessage({...body,session:appSession},playOrigin()),()=>viewport!.getBoundingClientRect(),file,data.renderer.camera);
@@ -1129,9 +1132,6 @@ export function createWorkspace() {
               data.seek !== undefined && !list(data.seek) || !data.renders.includes(canvasView) || required.some(control=>!data.controls.includes(control))) {
             webReady=null;webError='Web render bindings or inspect controls are unavailable';error=webError;return;
           }
-          const declared=(canvas.exports||[]).filter((row:any)=>row.scope==='*' || row.scope===canvasView);
-          const missing=declared.find((row:any)=>!data.exports.includes(row.id));
-          if (missing) {webReady=null;webError=`Missing runtime export ${missing.id}`;error=webError;return}
           if(!data.interaction||data.interaction.io_lock!==false){
             webReady=null;error=webError='Renderable must start in inspection and implement the interaction contract';
             return

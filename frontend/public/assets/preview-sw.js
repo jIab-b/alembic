@@ -2,6 +2,7 @@
 // that owns the session, which relays to Alembic. Nothing is cached; every request reads the folder.
 // Only the matching bridge can answer a session. Same-origin controller previews
 // stay opaque; only a dedicated, credential-free preview server keeps app origins.
+const bundled = new Set(/* bundled assets */ []);
 const host = new URL(self.location.href).searchParams.get('host');
 const isolated = host && (() => {
   try { const url = new URL(host); return ['http:', 'https:'].includes(url.protocol) && url.origin === host && url.origin !== self.location.origin; }
@@ -19,7 +20,7 @@ self.addEventListener('fetch', event => {
   const scope = new URL(self.registration.scope), url = new URL(event.request.url);
   if (url.origin !== scope.origin) return;
   const relative = url.pathname.startsWith(scope.pathname) ? url.pathname.slice(scope.pathname.length) : '';
-  // The Vault serves static assets with frame-ancestors 'none'. These packaged viewers
+  // The server serves static assets with frame-ancestors 'none'. These packaged viewers
   // are trusted, same-origin frames; their authored child apps remain sandboxed below.
   if (relative === 'play/index.html' || relative.startsWith('runtimes/')) {
     event.respondWith((async () => {
@@ -32,7 +33,8 @@ self.addEventListener('fetch', event => {
   }
   // Plumbing belongs to the preview host, not to the app's asset root.
   if (['play/bridge.js','play/app-tools.js','play/dom-capture.js','play/interaction.js',
-       'play/media.js','play/renderer.js','preview-sw.js'].includes(relative) || url.pathname.startsWith('/__al/')) return;
+       'play/media.js','play/renderer.js','play/html.js','preview-sw.js'].includes(relative) ||
+         bundled.has(relative) || url.pathname.startsWith('/__al/')) return;
   const match = /^play\/app\/([^/]+)\/(.+)$/.exec(relative);
   if (!match && !event.clientId) return;
   event.respondWith((async () => {

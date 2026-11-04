@@ -1,4 +1,4 @@
-// Shared workload for private WSL Chromium and tools/ui-check-windows.mjs.
+// Shared workload for private WSL Chromium and tests/ui-check-windows.mjs.
 import assert from 'node:assert/strict';
 export async function workload(page,route) {
   if(route==='godot') {

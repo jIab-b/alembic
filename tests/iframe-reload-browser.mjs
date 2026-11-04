@@ -1,12 +1,10 @@
+import {windowsBrowser} from './windows-browser.mjs';
 // Run in native Windows Node with a private backend/al URL file as argv[2].
 import {createRequire} from 'node:module';
 import {readFile,mkdtemp,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
-const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE||'playwright');
-if(!process.argv[2])throw new Error('Provide a private launch URL file');
-const profile=await mkdtemp(join(process.env.TEMP,'alembic-ui-reload-'));
-const context=await chromium.launchPersistentContext(profile,{executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,ignoreDefaultArgs:['--enable-unsafe-swiftshader'],viewport:{width:1400,height:900}});
+const {context, dispose} = await windowsBrowser({viewport: {width: 1400, height: 900}});
 try{
 const page=context.pages()[0],errors=[];
 // Prove light iframe display/IO/reload work with no optional runtime adapter at all.
@@ -66,4 +64,4 @@ assert.equal((await appearance()).pressed,'false');
 assert.equal((await appearance()).weight,'400');
 assert.equal((await appearance()).disabled,false);
 console.log('PASS: iframe IO stays enabled across app focus/blur, accepts keyboard input, toggles bold/muted and releases on Escape');
-}finally{await context.close();await rm(profile,{recursive:true,force:true})}
+}finally{await dispose()}

@@ -1,4 +1,4 @@
-"""Single-project node.js routes, with an API-free renderer origin. No Vault state."""
+"""Single-project HTTP routes and an API-free renderer origin."""
 import argparse, base64, hashlib, http.client, json, mimetypes, os, secrets, select, signal, socket, subprocess, sys
 import threading
 import time
@@ -276,7 +276,7 @@ def serve(root, port=0, node='', upstream='', state='', allowed='', self_app=Fal
                         return (self.respond((dict(nodes=[], artifacts=[], edges=[]) if op == 'graph' else []) if
                             peers else history(op, query, body)))
                     if op in ('node-commit', 'node-saves', 'node-restore'):
-                        return self.respond(dict(error='Recursive Save requires the pinned Vault backend'), 501)
+                        return self.respond(dict(error='Recursive Save is unsupported'), 501)
                 if route.startswith('/vms/local/'):
                     op = route[11:]
                     if op == 'events' and peers:
@@ -313,7 +313,7 @@ def serve(root, port=0, node='', upstream='', state='', allowed='', self_app=Fal
                     if op == 'sessions':
                         return self.respond(session('list'))
                     if op == 'run' and body.get('actor') == 'terminal-connections':
-                        return self.respond(dict(exit=0, stdout_tail=json.dumps(dict(local=True, rows=session('list')))))
+                        return self.respond(dict(exit=0, stdout_tail=json.dumps(dict(rows=session('list')))))
                     if op == 'run' and body.get('actor') == 'terminal-prompt':
                         if not session('active', id=body['session']): raise ValueError('No active session in terminal')
                         return self.respond(session('prompt', id=body['session'], text=body['text']))
@@ -327,8 +327,6 @@ def serve(root, port=0, node='', upstream='', state='', allowed='', self_app=Fal
                             'timeout_s', 10), 60))
                         return (self.respond(dict(exit=result.returncode, stdout_tail=result.stdout[-131072:].decode(
                             errors='replace'), stderr_tail=result.stderr[-131072:].decode(errors='replace'))))
-                    if op == 'shell-client':
-                        return self.respond(dict(executable='/bin/sh'))
                     if (op in ('call', 'launch', 'shell/ticket') or (op.startswith('sessions/') and op.endswith(
                         '/attach'))):
                         suppress = os.environ.get('AL_SUPPRESS_EMBEDDED', '1') != '0'
@@ -451,7 +449,7 @@ def serve(root, port=0, node='', upstream='', state='', allowed='', self_app=Fal
 
         def preview(self, route):
             if route == '/__al/app.js':
-                return self.respond((REPO / 'render/app.js').read_bytes(), kind='text/javascript')
+                return self.respond((REPO / 'render/iframe/app.js').read_bytes(), kind='text/javascript')
             if route == '/__al/state' and (mock or self_app):
                 if self.headers.get('Origin') not in (None, preview_origin):
                     raise PermissionError('Wrong renderer origin')

@@ -1,7 +1,8 @@
+import {mediaHTML} from '../../../render/registry.js';
 import { checkedHTML, effectScript } from './effect.js';
 // Only generated glue is synthetic; authored files and dependencies stay in their node.
 export function mediaEntry(node, render, scenarios, exports, background, source) {
-    const html = render.format === 'webaudio' && render.entry.endsWith('.html');
+    const html = mediaHTML(render);
     const config = { render, scenarios, exports, background, html };
     const entry = html ? new TextDecoder().decode(checkedHTML(source, node)) : '<!doctype html><head>' + effectScript(
       node);

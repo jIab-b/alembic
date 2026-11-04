@@ -2,8 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
-import {createRequire} from 'node:module';
-const require=createRequire(import.meta.url);
+import {windowsBrowser} from './windows-browser.mjs';
 const runtime=`<!doctype html><canvas tabindex="0"></canvas><script type="module">
 import {bindInteraction} from '/interaction.js';
 window.applied={io:true,screen:true,hud:true,held:3};window.trace=[];
@@ -13,7 +12,6 @@ window.binding=bindInteraction(hooks);await binding.ready;
 parent.postMessage({type:'test.ready',interaction:binding.state},location.origin);
 </script>`;
 test('web runtime hooks enforce opt-in independently and release actual frame input on blur/Escape',{timeout:30000},async t=>{
-  let chromium;try{({chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'));}catch(error){if(error.code==='MODULE_NOT_FOUND'){t.skip('Playwright unavailable');return;}throw error;}
   const source=await readFile(new URL('../frontend/public/assets/play/interaction.js',import.meta.url));
   const server=createServer((req,res)=>{
     res.setHeader('Content-Type',req.url==='/interaction.js'?'text/javascript':'text/html');
@@ -24,8 +22,9 @@ test('web runtime hooks enforce opt-in independently and release actual frame in
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
   try{
-    browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
-    const page=await browser.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('http://127.0.0.1:'+server.address().port);
+    browser=await windowsBrowser({viewport:{width:1450,height:900}});
+    const page=await browser.context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+      await page.goto('http://127.0.0.1:'+server.address().port);
     await page.waitForFunction(()=>messages.some(row=>row.type==='test.ready'));
     const frame=page.frameLocator('#runtime'),state=()=>frame.locator('canvas').evaluate(()=>binding.state);
     const command=(type,extra)=>page.evaluate(([type,extra])=>command(type,extra),[type,extra]);
@@ -55,5 +54,5 @@ test('web runtime hooks enforce opt-in independently and release actual frame in
     for(const invalid of [{io_lock:'true'},{pointer_lock:true},{target:{code:'not executable'}}])assert.equal((await change(invalid)).ok,false);
     await frame.locator('canvas').evaluate(()=>binding.dispose());assert.equal((await state()).io_lock,false);
     assert.deepEqual(errors,[]);
-  }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+  }finally{await browser?.dispose();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });

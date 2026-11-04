@@ -3,47 +3,26 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
-import {NullEngine} from '../frontend/node_modules/@babylonjs/core/Engines/nullEngine.js';
-import {Scene} from '../frontend/node_modules/@babylonjs/core/scene.js';
-import {FreeCamera} from '../frontend/node_modules/@babylonjs/core/Cameras/freeCamera.js';
-import {ArcRotateCamera} from '../frontend/node_modules/@babylonjs/core/Cameras/arcRotateCamera.js';
-import {Vector3, Matrix} from '../frontend/node_modules/@babylonjs/core/Maths/math.vector.js';
-import {Viewport} from '../frontend/node_modules/@babylonjs/core/Maths/math.viewport.js';
 
 // Node resolves the same pinned package that Vite aliases for renderer sources.
 const require = createRequire(new URL('../frontend/package.json', import.meta.url));
+const {NullEngine} = await import(pathToFileURL(require.resolve('@babylonjs/core/Engines/nullEngine.js')).href);
+const {Scene} = await import(pathToFileURL(require.resolve('@babylonjs/core/scene.js')).href);
+const {FreeCamera} = await import(pathToFileURL(require.resolve('@babylonjs/core/Cameras/freeCamera.js')).href);
+const {ArcRotateCamera} =
+  await import(pathToFileURL(require.resolve('@babylonjs/core/Cameras/arcRotateCamera.js')).href);
+const {Vector3, Matrix} = await import(pathToFileURL(require.resolve('@babylonjs/core/Maths/math.vector.js')).href);
+const {Viewport} = await import(pathToFileURL(require.resolve('@babylonjs/core/Maths/math.viewport.js')).href);
 const math = '@babylonjs/core/Maths/math.vector.js';
 const source = (await readFile(new URL('../render/babylon/orbit.js', import.meta.url), 'utf8'))
     .replace(math, pathToFileURL(require.resolve(math)).href);
 const {orbit} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 
-// Main three-viewer.js: position then lookAt, matrix columns for pan, normalized WASD, same turn and FOV.
-const THREE = require('three');
+// Recorded from the previous camera reference before removing its unused renderer dependency.
+const reference = JSON.parse(await readFile(new URL('./fixtures/orbit-reference.json', import.meta.url)));
 function mainDeltas(pose, input, fov) {
-    const camera = new THREE.PerspectiveCamera(fov * 180 / Math.PI, 1.5, .01, 1000);
-    const start = new THREE.Vector3(...pose.position), pivot = new THREE.Vector3(...pose.target);
-    camera.position.copy(start); camera.lookAt(pivot); camera.updateMatrixWorld();
-    const column = n => new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, n);
-    const point = pivot.clone().addScaledVector(column(0), .6).addScaledVector(column(1), .4)
-        .addScaledVector(column(2), 1.5);
-    const project = () => { const p = point.clone().project(camera); return [(p.x + 1) * 600, (1 - p.y) * 400]; };
-    const before = project(), offset = start.clone().sub(pivot), distance = offset.length();
-    const azimuth = Math.atan2(offset.x, offset.z), elevation = Math.asin(offset.y / distance);
-    return (input.startsWith('Key') ? [[0, 0]] : [[-60, 0], [60, 0], [0, -60], [0, 60]]).flatMap(([dx, dy]) => {
-        camera.position.copy(start); camera.lookAt(pivot); camera.updateMatrixWorld();
-        const target = pivot.clone(), pan = 2 * distance * Math.tan(fov / 2) / 800;
-        if (input.startsWith('Key')) target.addScaledVector(column(['KeyW', 'KeyS'].includes(input) ? 2 : 0),
-            (['KeyW', 'KeyA'].includes(input) ? -1 : 1) * .117);
-        else if (input !== 'orbit') target.addScaledVector(column(0), -dx * pan).addScaledVector(column(1), dy * pan);
-        const a = azimuth - (input === 'orbit' ? dx * 2 / 1200 : 0);
-        const e = elevation + (input === 'orbit' ? dy * 2 / 1200 : 0);
-        camera.position.set(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a))
-            .multiplyScalar(distance).add(target);
-        camera.lookAt(target); camera.updateMatrixWorld();
-        const after = project();
-        return input.startsWith('Key') ? after.map((v, i) => v - before[i])
-            : [dx ? after[0] - before[0] : after[1] - before[1]];
-    });
+    assert.deepEqual(pose, reference.pose); assert.equal(fov, reference.fov);
+    return reference.directions[input];
 }
 
 test('inspection keeps its pivot centred and matches main directions for both camera types and handednesses', () => {

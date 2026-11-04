@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {playwright,chromiumPath} from '../backend/deps.mjs';
-import {assertHardware} from '../tools/gpu-browser.mjs';
+import {assertHardware} from './gpu-browser.mjs';
 if(!process.env.TMPDIR)throw Error('TMPDIR is required');
 if(resolve(process.env.TMPDIR).startsWith(process.cwd()+'/'))process.env.TMPDIR='/proc/self/cwd/'+resolve(process.env.TMPDIR).slice(process.cwd().length+1);
 const {chromium}=playwright();

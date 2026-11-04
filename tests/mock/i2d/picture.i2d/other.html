@@ -1,7 +1,9 @@
 <!doctype html><style>html,body{margin:0;width:100%;height:100%}#shape{position:absolute;left:20%;top:20%;width:40%;height:40%;background:#527cac}</style><div id="shape"></div><script type="module">
-import {bindInteraction} from '/assets/play/interaction.js';
-window.effects={keys:0,mouse:0};let io=false;const binding=bindInteraction({release(){},io_lock:on=>{io=on;if(on)window.focus()}});await binding.ready;
-addEventListener('keydown',()=>{if(io)effects.keys++});addEventListener('pointerdown',()=>{if(io)effects.mouse++});
-parent.postMessage({type:'alembic.web.ready',renders:['alternate'],scenarios:['alternate'],exports:[],controls:['play','reset','escape'],interaction:binding.state},location.origin);
-addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin)return;const d=e.data;if(!['alembic.web.play','alembic.web.reset'].includes(d?.type))return;document.querySelector('#shape').style.background=d.type.endsWith('play')?'#c85b4a':'#527cac';parent.postMessage({type:'alembic.web.result',id:d.id,ok:true},location.origin)});
+import {bindRender} from '/assets/play/html.js';
+window.effects={keys:0,mouse:0};let io=false;
+addEventListener('keydown',()=>{if(io)effects.keys++});
+addEventListener('pointerdown',()=>{if(io)effects.mouse++});
+await bindRender({renders:['alternate'],scenarios:['alternate'],io:on=>{io=on;if(on)window.focus()},
+play:()=>document.querySelector('#shape').style.background='#c85b4a',
+reset:()=>document.querySelector('#shape').style.background='#527cac'});
 </script>

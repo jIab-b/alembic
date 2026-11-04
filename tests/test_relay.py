@@ -1,4 +1,4 @@
-"""Live relay acceptance: real PTYs and sockets, no agents or default Vault."""
+"""Live relay acceptance: real PTYs and sockets, no agents or default backend."""
 import base64, json, os, signal, socket, subprocess, sys, tempfile, time, shutil, unittest, urllib.error, urllib.request
 from pathlib import Path
 sys.dont_write_bytecode=True
@@ -331,7 +331,7 @@ class Relay(unittest.TestCase):
         (old / 'sessions').mkdir(parents=True)
         (old / 'sessions/history.jsonl').write_text('retained-history')
         unrelated = HOME / 'projects/untouched'; unrelated.mkdir(parents=True, exist_ok=True)
-        (unrelated / 'sentinel').write_text('Vault')
+        (unrelated / 'sentinel').write_text('backend')
         ensure(root)
         try:
             home = root / '.alembic/agent-home'
@@ -347,7 +347,7 @@ class Relay(unittest.TestCase):
             time.sleep(.1); ensure(root)
             self.assertFalse(temp.exists())
             self.assertEqual((home / 'sessions/history.jsonl').read_text(), 'retained-history')
-            self.assertEqual((unrelated / 'sentinel').read_text(), 'Vault')
+            self.assertEqual((unrelated / 'sentinel').read_text(), 'backend')
         finally:
             os.kill(int((location(root) / 'holder.pid').read_text()), signal.SIGTERM)
         subprocess.run(['git', '-C', str(root), 'init'], check=True, capture_output=True)

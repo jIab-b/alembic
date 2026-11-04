@@ -3,7 +3,7 @@ import { RegisterRay } from '@babylonjs/core/Culling/ray.pure.js';
 import { createRender, connectRender } from '../bridge.js';
 import { orbit } from './orbit.js';
 import { shapePass } from './volumes.js';
-import { within, framed } from '../../frontend/src/gltf.js';
+import { within, framed } from './document.js';
 import { bindInteraction } from '../../frontend/public/assets/play/interaction.js';
 // Runs in the node's isolated renderer process. No controller-owned animation loop.
 export async function bindRender({ scene, camera = scene.activeCamera, interaction: hooks, renders = ['main'],

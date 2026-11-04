@@ -8,7 +8,7 @@ export function webSurface(call, send, bounds, source, state) {
     camera.drawShapes = (shapes, style = shapeStyle, tool) => send({ type: 'alembic.web.draw', shapes, style, tool });
     return camera;
 }
-export { loadViewer } from '../../../render/formats.js';
+export { loadViewer } from '../../../render/registry.js';
 export { mediaEntry } from './media.js';
 export { checkedHTML } from './effect.js';
 export { surfaceFor } from './types.js';

@@ -3,7 +3,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color.js';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
 import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder.js';
 import { CreateSphere } from '@babylonjs/core/Meshes/Builders/sphereBuilder.js';
-import { radii } from '../../frontend/src/gltf.js';
+import { radii } from './document.js';
 export const shapeStyle = { color: '#e28a67', alpha: .18 };
 export function shapePass(scene, changed = () => {
 }) {

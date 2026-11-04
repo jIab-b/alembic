@@ -66,12 +66,13 @@ test('restore reports verified destination and keeps failures visible', async ()
   assert.match(last.restoreError,/invalid node-restore receipt/);
 });
 
-test('node save failures preserve actual errors and unsupported routes suggest a Vault update', async () => {
+test('node save failures preserve actual errors and unsupported routes suggest a backend update', async () => {
   const client = new NodeClient(config);
   for (const status of [404, 405, 501]) {
     client.transport = async () => Response.json({error: 'unsupported', fix: 'Node saves unavailable'}, {status});
-    await assert.rejects(client.saveNode('scene.glb'), new RegExp(`${status} unsupported: Node saves unavailable.*update Vault`));
-    await assert.rejects(client.listNodeSaves('scene.glb'), /update Vault/);
+    await assert.rejects(client.saveNode('scene.glb'),
+      new RegExp(`${status} unsupported: Node saves unavailable.*Recursive saved states are unsupported`));
+    await assert.rejects(client.listNodeSaves('scene.glb'), /Recursive saved states are unsupported/);
   }
   client.transport = async () => Response.json({error: 'stale', fix: 'Read the current manifest and retry'}, {status: 409});
   await assert.rejects(client.saveNode('scene.i3d', 'sha256:' + 'd'.repeat(64)), /^Error: 409 stale: Read the current manifest and retry$/);

@@ -2,7 +2,7 @@
 import importlib.machinery,json,os,signal,subprocess,sys,tempfile,time
 from pathlib import Path
 repo=Path(__file__).resolve().parents[1];sys.path.insert(0,str(repo/'backend'))
-from common import connection, launch_url, location, start
+from common import connection, launch_url, location, start, rpc
 runner=importlib.machinery.SourceFileLoader('windows_run',str(repo/'tests/windows-run.py')).load_module()
 with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as temp:
     root=Path(temp)/'project';root.mkdir()
@@ -18,4 +18,10 @@ with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as temp:
             result=runner.run(url_file,root/'report','state',extra)
             if result.returncode:sys.exit(result.stdout+result.stderr)
         print('Frozen states replayed: '+str(len(sys.argv)-1))
-    finally:process.terminate();process.wait(timeout=5)
+    finally:
+        process.terminate();process.wait(timeout=5)
+        marker=location(root)/'holder.pid'
+        if marker.exists():
+            for row in rpc(root,'list'):
+                if not row['exited']:rpc(root,'kill',id=row['id'])
+            os.kill(int(marker.read_text()),signal.SIGTERM)

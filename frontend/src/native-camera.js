@@ -1,5 +1,5 @@
-import {Matrix4,Vector3} from '../../render/native/math.js';
-import {half} from './gltf.js';
+import {transform} from '../../render/native/math.js';
+import {half} from '../../render/model.js';
 
 // A camera mirror only. Camera movement continues to belong to the native app.
 export class NativeCamera {
@@ -7,19 +7,20 @@ export class NativeCamera {
   update(state){
     if(!state||!['clip','view','world'].every(k=>Array.isArray(state[k])&&state[k].length===16&&state[k].every(Number.isFinite))||!state.region?.every(Number.isFinite)||state.region[2]<=0||state.region[3]<=0||state.width<=0||state.height<=0)throw Error('Invalid native camera');
     const key=JSON.stringify(state);if(key===this.key)return;this.key=key;this.state=state;this.version++;
-    this.clip=new Matrix4().fromArray(state.clip);this.view=new Matrix4().fromArray(state.view);
+    this.clip=state.clip;this.view=state.view;
   }
   get ready(){return !!this.state}
   frame(){const box=this.bounds(),s=this.state,scale=Math.min(box.width/s.width,box.height/s.height);return {box,scale,x:(box.width-s.width*scale)/2,y:(box.height-s.height*scale)/2}}
   clientPoint(point){const f=this.frame();return [f.box.left+f.x+point[0]*f.scale,f.box.top+f.y+point[1]*f.scale]}
   project(point){
     if(!this.ready)return null;
-    const p=new Vector3(...point);if(p.clone().applyMatrix4(this.view).z>=0)return null;
-    p.applyMatrix4(this.clip);const s=this.state,[rx,ry,rw,rh]=s.region,f=this.frame();
-    return [f.x+(rx+(p.x+1)*rw/2)*f.scale,f.y+(s.height-ry-(p.y+1)*rh/2)*f.scale];
+    if(transform(point,this.view)[2]>=0)return null;
+    const p=transform(point,this.clip),s=this.state,[rx,ry,rw,rh]=s.region,f=this.frame();
+    return [f.x+(rx+(p[0]+1)*rw/2)*f.scale,f.y+(s.height-ry-(p[1]+1)*rh/2)*f.scale];
   }
   axes(){const e=this.state.world;return {right:e.slice(0,3),up:e.slice(4,7),forward:e.slice(8,11).map(v=>-v)}}
-  dragFrame(point){const s=this.state,f=this.frame(),depth=-new Vector3(...point).applyMatrix4(this.view).z;return {...this.axes(),scale:2*(s.orthographic?1:Math.max(.001,depth))/(Math.abs(s.windowY)*s.region[3]*f.scale)}}
+  dragFrame(point){const s=this.state,f=this.frame(),depth=-transform(point,this.view)[2];return {...this.axes(),
+    scale:2*(s.orthographic?1:Math.max(.001,depth))/(Math.abs(s.windowY)*s.region[3]*f.scale)}}
   pose(){return {position:this.state.world.slice(12,15),forward:this.axes().forward}}
   replayPose(){const p=this.pose();return {position:p.position,target:p.position.map((v,k)=>v+p.forward[k]*this.state.distance)}}
   defaultRadius(){return this.radius}

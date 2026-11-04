@@ -1,4 +1,4 @@
-import { localRender } from '../local.js';
+import { localRender } from './local.js';
 import { orbit } from './orbit.js';
 import { shapePass } from './volumes.js';
 import.meta.glob('../../frontend/node_modules/@babylonjs/core/ShadersWGSL/ShadersInclude/*.js', { eager: true });
@@ -16,7 +16,7 @@ import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader.js';
 import '@babylonjs/loaders/glTF/index.js';
-import { container, pack, framed, half, radii, within } from '../../frontend/src/gltf.js';
+import { container, pack, framed, half, radii, within } from './document.js';
 // The browser test may replace this check; production always rejects software adapters.
 export async function gpuCheck(canvas) {
     if (navigator.gpu) {

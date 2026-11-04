@@ -14,13 +14,11 @@ test('canvas rejects escapes, cycles, nested canvases, missing references and in
   }
   const layout=canvasLayout(doc);assert.ok(layout[0].x<layout[1].x&&layout[1].x<layout[2].x);
 });
-test('render view labels default from format and declared application',()=>{
-  const doc={format:'alembic.canvas',version:1,title:'Weapon',defaultView:'asset',views:['asset','arms-asset','rifle','arms','runtime'],nodes:[
-    {id:'asset',path:'rifle.glb',inputs:[]},{id:'arms-asset',path:'arms.glb',inputs:[]},{id:'rifle',path:'rifle.stream',application:'blender',inputs:[]},
-    {id:'arms',path:'arms.stream',application:'blender',inputs:[]},{id:'runtime',path:'runtime.stream',application:'godot',inputs:[]}]};
-  assert.deepEqual(readCanvas(encode(doc)).nodes.map(n=>n.label),['GLB · rifle','GLB · arms','Blender · rifle','Blender · arms','Godot']);
-  doc.nodes[4].label='Godot gameplay';assert.equal(readCanvas(encode(doc)).nodes[4].label,'Godot gameplay');
-  delete doc.nodes[2].application;assert.throws(()=>readCanvas(encode(doc)),/Invalid canvas/);
+test('render view labels come from the registry',()=>{
+  const doc={format:'alembic.canvas',version:1,title:'Weapon',defaultView:'asset',views:['asset','arms'],nodes:[
+    {id:'asset',path:'rifle.glb',inputs:[]},{id:'arms',path:'arms.glb',inputs:[]}]};
+  assert.deepEqual(readCanvas(encode(doc)).nodes.map(n=>n.label),['GLB · rifle','GLB · arms']);
+  doc.nodes[1].label='Custom';assert.equal(readCanvas(encode(doc)).nodes[1].label,'Custom');
 });
 test('freshness checks exact outputs, inputs, resources and transitive dependency state',async()=>{
   const doc=fixture(),files=new Map([['castle.blend',a],['castle.glb',b],['build/index.html',c],['build/index.pck',b]]);

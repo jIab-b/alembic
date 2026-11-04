@@ -12,8 +12,11 @@ export async function frontendModules(names = ['folder','history','backends','wo
       let source = await readFile(new URL('../frontend/src/'+path, import.meta.url), 'utf8');
       if (name === 'workspace') {
         source = source.replace("import {onMount} from 'svelte';", 'const onMount = callback => globalThis.__uiMounts.push(callback);')
-          .replaceAll('import.meta.env.BASE_URL', "'/'").replace('await loadViewer()', 'globalThis.__uiViewer');
+          .replaceAll('import.meta.env.BASE_URL', "'/'").replace('await loadViewer(surface.format)',
+            'globalThis.__uiViewer');
       }
+      source = source.replace(/(['"])\.\.\/\.\.\/render\/([^'"]+)\1/g,
+        (_, quote, path) => JSON.stringify(new URL('../render/' + path, import.meta.url).href));
       source = source.replace(/(['"])\.\/([^'"]+)\1/g, (_match, _quote, path) => {
         const generated = {folder:'folder', history:'history', 'terminal/backends':'backends', 'replay.svelte':'replay'};
         return JSON.stringify(generated[path] ? './'+generated[path]+'.mjs'

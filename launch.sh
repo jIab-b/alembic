@@ -9,6 +9,7 @@ ours() {
     for dir in /proc/[0-9]*; do
         tr '\0' '\n' 2>/dev/null < "$dir/cmdline" |
             grep -qxF -e "$root/backend/server.py" -e "$root/backend/sessions.py" && echo "${dir#/proc/}"
+        tr '\0' '\n' 2>/dev/null < "$dir/environ" | grep -qxF "ALEMBIC_ROOT=$root" && [ "${dir#/proc/}" != "$$" ] && echo "${dir#/proc/}"
     done
 }
 cleanup() {

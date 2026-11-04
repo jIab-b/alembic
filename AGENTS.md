@@ -1,20 +1,10 @@
 # Repository guidance
 
-Read [docs/frontend-contract.md](docs/frontend-contract.md) first. Main's working
-frontend in the main checkout (`git worktree list`) is read-only reference.
-Preserve its appearance, controls, prompt context and behaviour. No engine imports
-in frontend; use render and backend funnels. Keep explicit parity exceptions small.
-New code belongs in frontend/src/contract/, render/, backend/ or tests/.
-
-Typed packages are visible, openable parent directories. Save retains the full
-recursive source/dependency closure through pinned Vault. Preserve existing
-history, saved nodes, CAS and legacy readers until migration is verified.
-Sources/assets stay with the project. Disposable work uses owned TMPDIR beneath
-this worktree's .tmp/; remove it afterwards. Never write .alembic/.cache here.
-WSL desktop uses desktop/run_windows.py and native Windows Electron. Stream
-rendering is unavailable; fail visibly. Never substitute software rendering.
-See docs/frontend-contract.md for retained readers and route limitations.
-Prompts printed by `backend/al wait` come from the user through the Alembic prompt box, so treat them as the user's input.
-When an Alembic prompt is finished, run
-`backend/al done <details-file>`
-using the details path in that prompt.
+Read docs/frontend-contract.md first. Preserve the UI, controls and prompt payload.
+Keep engine code in render/, runtime port checks in frontend/src/contract/, and
+server/session code in backend/. Skills are plain opt-in authoring guidance.
+Keep sources and dependencies with the project. Never pack .alembic/ state.
+Use owned TMPDIR beneath .tmp/ and remove disposable work after verification.
+Never use software rendering. On WSL use native Windows Electron through desktop/run_windows.py.
+Prompts printed by backend/al wait are user input. When finished, run
+`backend/al done <details-file>` using the details path from that prompt.

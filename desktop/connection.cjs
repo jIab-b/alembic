@@ -14,7 +14,7 @@ function launchOptions(argv, saved = {}) {
   if (!options.url) throw new Error('Pass --connect with the project launch URL the first time.');
   const url = new URL(options.url);
   if (url.protocol !== 'http:' || !['127.0.0.1','localhost','[::1]'].includes(url.hostname) || url.username || url.password)
-    throw new Error('Use the loopback Vault URL; --ssh forwards that endpoint from the remote host.');
+    throw new Error('Use the loopback backend URL; --ssh forwards that endpoint from the remote host.');
   for (const key of ['local-port','preview-local-port']) if (options[key] !== undefined && (!/^\d+$/.test(String(options[key])) || Number(options[key]) < 1 || Number(options[key]) > 65535))
     throw new Error('Invalid ' + key);
   if (options.ssh && (typeof options.ssh !== 'string' || !/^[\w@.:[\]-]+$/.test(options.ssh) || options.ssh.startsWith('-')))

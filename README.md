@@ -4,18 +4,21 @@ Visual interface and highlight prompts for connecting to AI agents. Connect thro
 
 Right now the 3D view is Babylon.js, 2D is SVG/PNG plus an HTML viewer for replay, and iframe nodes embed web pages directly.
 
-![Highlight an area, send a prompt, see the agent's edit](demos/prompt-flow.gif)
+![Highlight an area, send a prompt, see the agent's edit](docs/media/prompt-flow.gif)
 
-![A 2D node replaying](demos/demon-archer.gif)
+![A 2D node replaying](docs/media/demon-archer.gif)
 
 ## Run
 
 Needs Linux or WSL, Python 3, Node, and an agent CLI such as Codex or Claude Code.
 
 ```bash
-npm --prefix frontend install
-./launch.sh path/to/project
+npm install
+npm start -- path/to/project
 ```
+
+`npm start -- --no-open PATH` runs without opening a browser. Starting and stopping cleans up everything it started. Project state is created in `.alembic/` on first use.
+Electron is optional; see [desktop](desktop/). Run CPU checks with `npm test`.
 
 The embedded terminal runs agents with your own permissions, with no sandbox.
 
@@ -29,3 +32,9 @@ backend/al wait --name my-agent     # or listen from any session and read prompt
 ## Nodes
 
 A node is a folder named `name.i3d`, `name.i2d`, `name.audio` or `name.iframe`. See [the contract](docs/frontend-contract.md), [the skills](skills/) and [the demos](tests/mock/demos/).
+
+To add a render backend: add a folder in `render/`, one row in `render/registry.js`, and a fixture for the port's conformance suite. The frontend doesn't change.
+
+## License
+
+MIT

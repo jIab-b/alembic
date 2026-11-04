@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {animationNames} from './gltf.js';
+  import {animationNames} from '../../render/model.js';
   let {folder,path,view,onclip}:{folder:any;path:string;view:any;onclip:(path:string,view:string,index:number,name:string)=>void}=$props();
   let names=$state<string[]>([]),busy=$state(false),error=$state(''),stamp=$state('');
   async function expand(event:Event) {
